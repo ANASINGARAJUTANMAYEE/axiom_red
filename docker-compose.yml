@@ -1,0 +1,98 @@
+networks:
+  axiom-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+services:
+
+  # ── DVWA (Damn Vulnerable Web Application) ──────────────────────────
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    container_name: axiom-dvwa
+    ports:
+      - "8080:80"
+    environment:
+      - DB_SERVER=dvwa-db
+    depends_on:
+      - dvwa-db
+    networks:
+      axiom-net:
+        ipv4_address: 172.20.0.10
+    restart: unless-stopped
+
+  dvwa-db:
+    image: mariadb:10.11
+    container_name: axiom-dvwa-db
+    environment:
+      MYSQL_ROOT_PASSWORD: dvwa
+      MYSQL_DATABASE: dvwa
+      MYSQL_USER: dvwa
+      MYSQL_PASSWORD: p@ssw0rd
+    networks:
+      axiom-net:
+        ipv4_address: 172.20.0.11
+    restart: unless-stopped
+
+  # ── OWASP Juice Shop ────────────────────────────────────────────────
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    container_name: axiom-juiceshop
+    ports:
+      - "3000:3000"
+    networks:
+      axiom-net:
+        ipv4_address: 172.20.0.20
+    restart: unless-stopped
+
+  # ── Custom Vulnerable API (Flask) ───────────────────────────────────
+  vulnerable-api:
+    build:
+      context: ./targets/vulnerable-api
+      dockerfile: Dockerfile
+    container_name: axiom-vuln-api
+    ports:
+      - "5000:5000"
+    networks:
+      axiom-net:
+        ipv4_address: 172.20.0.30
+    restart: unless-stopped
+
+  # ── Unauthenticated Redis ────────────────────────────────────────────
+  redis-exposed:
+    image: redis:7.2-alpine
+    container_name: axiom-redis
+    command: redis-server --protected-mode no
+    ports:
+      - "6379:6379"
+    networks:
+      axiom-net:
+        ipv4_address: 172.20.0.40
+    restart: unless-stopped
+
+  # ── AXIOM RED Backend (FastAPI) ─────────────────────────────────────
+  axiom-backend:
+    build:
+      context: .                      # project root — so Dockerfile can reach agent/ and requirements.txt
+      dockerfile: backend/Dockerfile
+    container_name: axiom-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - TARGET_NETWORK=172.20.0.0/24
+    volumes:
+      - ./agent:/app/agent
+      - ./reports:/app/reports
+    networks:
+      axiom-net:
+        ipv4_address: 172.20.0.100
+    depends_on:
+      - dvwa
+      - juice-shop
+      - vulnerable-api
+      - redis-exposed
+    restart: unless-stopped

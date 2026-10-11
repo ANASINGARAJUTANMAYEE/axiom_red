@@ -1,0 +1,48 @@
+# ── Python ────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Virtual Environment ───────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ── Secrets / Environment ─────────────────────────────────────────────
+.env
+*.env.local
+
+# ── Generated Reports (keep template, not output) ─────────────────────
+reports/*.html
+reports/*.pdf
+
+# ── SQLite DBs (runtime temp) ─────────────────────────────────────────
+*.db
+*.sqlite3
+/tmp/
+
+# ── IDE / Editor ──────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Docker volumes ────────────────────────────────────────────────────
+.docker/
+
+# ── Node (if any) ─────────────────────────────────────────────────────
+node_modules/

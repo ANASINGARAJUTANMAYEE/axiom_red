@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AXIOM RED — AI Red Team Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- ── SIDEBAR ─────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">⬡</div>
+    <div>
+      <div class="logo-name">AXIOM RED</div>
+      <div class="logo-sub">AI Red Team Console</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a class="nav-item active" data-panel="dashboard" onclick="showPanel('dashboard',this)">
+      <span class="nav-icon">◈</span> Dashboard
+    </a>
+    <a class="nav-item" data-panel="recon" onclick="showPanel('recon',this)">
+      <span class="nav-icon">◉</span> Recon
+    </a>
+    <a class="nav-item" data-panel="findings" onclick="showPanel('findings',this)">
+      <span class="nav-icon">◆</span> Findings
+    </a>
+    <a class="nav-item" data-panel="attackgraph" onclick="showPanel('attackgraph',this)">
+      <span class="nav-icon">🕸</span> Attack Graph
+    </a>
+    <a class="nav-item" data-panel="compliance" onclick="showPanel('compliance',this)">
+      <span class="nav-icon">📋</span> Compliance
+    </a>
+    <a class="nav-item" data-panel="xss" onclick="showPanel('xss',this)">
+      <span class="nav-icon">🔐</span> XSS Attacks
+    </a>
+    <a class="nav-item" data-panel="logs" onclick="showPanel('logs',this)">
+      <span class="nav-icon">≡</span> Activity Log
+    </a>
+    <a class="nav-item" data-panel="report" onclick="showPanel('report',this)">
+      <span class="nav-icon">⊞</span> Report
+    </a>
+  </nav>
+
+  <div class="sidebar-status" id="sidebar-status">
+    <div class="status-dot idle" id="status-dot"></div>
+    <span id="status-text">Ready</span>
+  </div>
+</aside>
+
+<!-- ── MAIN ────────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-title" id="topbar-title">New Engagement</span>
+      <span class="topbar-badge" id="topbar-phase">IDLE</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost" id="btn-terminal" onclick="toggleTerminalView()" title="Terminal Hacker View">🌙 Terminal</button>
+      <button class="btn btn-ghost" id="btn-voice" onclick="toggleVoice()" title="Toggle AI voice narration">🔇 Voice</button>
+      <button class="btn btn-ghost" id="btn-stop" onclick="stopScan()" style="display:none">⏹ Stop</button>
+      <a class="btn btn-outline" id="btn-report" href="#" target="_blank" style="display:none">⊞ View Report</a>
+    </div>
+  </header>
+
+  <!-- ── PANEL: DASHBOARD ─────────────────────────────────────────── -->
+  <div class="panel active" id="panel-dashboard">
+
+    <!-- SCAN INITIATION -->
+    <div class="scan-card" id="scan-card">
+      <div class="scan-header">
+        <div class="scan-title">Launch Engagement</div>
+        <div class="scan-sub">Enter a target within the authorised Docker sandbox</div>
+      </div>
+      <div class="scan-form">
+        <div class="form-group">
+          <label>Target URL</label>
+          <input type="text" id="target-input" value="http://localhost:5000"
+                 placeholder="http://172.20.0.30:5000" />
+        </div>
+        <div class="form-group">
+          <label>LLM Provider</label>
+          <select id="llm-select">
+            <option value="gemini">Google Gemini 2.0 Flash</option>
+            <option value="openai">OpenAI GPT-4o</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="btn-start" onclick="startScan()">
+          ▶ Launch AXIOM RED
+        </button>
+      </div>
+    </div>
+
+    <!-- PHASE PROGRESS -->
+    <div class="phases-row" id="phases-row">
+      <div class="phase-step" id="phase-RECON">
+        <div class="phase-icon">⊙</div>
+        <div class="phase-label">Recon</div>
+        <div class="phase-status">pending</div>
+      </div>
+      <div class="phase-arrow">→</div>
+      <div class="phase-step" id="phase-ANALYSE">
+        <div class="phase-icon">⊕</div>
+        <div class="phase-label">Analyse</div>
+        <div class="phase-status">pending</div>
+      </div>
+      <div class="phase-arrow">→</div>
+      <div class="phase-step" id="phase-PLAN">
+        <div class="phase-icon">⊗</div>
+        <div class="phase-label">Plan</div>
+        <div class="phase-status">pending</div>
+      </div>
+      <div class="phase-arrow">→</div>
+      <div class="phase-step" id="phase-TEST">
+        <div class="phase-icon">⊘</div>
+        <div class="phase-label">Test</div>
+        <div class="phase-status">pending</div>
+      </div>
+      <div class="phase-arrow">→</div>
+      <div class="phase-step" id="phase-VALIDATE">
+        <div class="phase-icon">⊛</div>
+        <div class="phase-label">Validate</div>
+        <div class="phase-status">pending</div>
+      </div>
+      <div class="phase-arrow">→</div>
+      <div class="phase-step" id="phase-REPORT">
+        <div class="phase-icon">⊞</div>
+        <div class="phase-label">Report</div>
+        <div class="phase-status">pending</div>
+      </div>
+    </div>
+
+    <!-- STATS ROW -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value critical" id="stat-critical">0</div>
+        <div class="stat-label">Critical</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value high" id="stat-high">0</div>
+        <div class="stat-label">High</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value medium" id="stat-medium">0</div>
+        <div class="stat-label">Medium</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value low" id="stat-low">0</div>
+        <div class="stat-label">Low</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value info" id="stat-ports">0</div>
+        <div class="stat-label">Ports Found</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value info" id="stat-endpoints">0</div>
+        <div class="stat-label">Endpoints</div>
+      </div>
+    </div>
+
+    <!-- RISK RADAR CHART + LIVE FEED side by side -->
+    <div class="two-col">
+      <div class="card radar-card">
+        <div class="card-title">📊 Security Posture Radar</div>
+        <canvas id="radar-canvas" width="300" height="300"></canvas>
+      </div>
+      <div class="live-feed-card" style="flex:1.5">
+        <div class="feed-header">
+          <span>⚡ Live Agent Feed</span>
+          <span class="feed-badge" id="feed-badge">0 events</span>
+        </div>
+        <div class="feed-body" id="live-feed">
+          <div class="feed-empty">Waiting for engagement to start…</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panel-dashboard -->
+
+  <!-- ── PANEL: RECON ─────────────────────────────────────────────── -->
+  <div class="panel" id="panel-recon">
+    <div class="panel-head">
+      <div class="panel-title">Recon Results</div>
+      <div class="panel-sub">Discovered ports, endpoints and technologies</div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Open Ports</div>
+        <div id="ports-list" class="mono-list">No data yet</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Technologies</div>
+        <div id="tech-list" class="mono-list">No data yet</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">Web Endpoints</div>
+      <div id="endpoints-list" class="mono-list">No data yet</div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: FINDINGS ──────────────────────────────────────────── -->
+  <div class="panel" id="panel-findings">
+    <div class="panel-head">
+      <div class="panel-title">Findings</div>
+      <div class="panel-sub">Confirmed vulnerabilities with evidence</div>
+    </div>
+    <div id="findings-list">
+      <div class="empty-state">No findings yet — run an engagement first.</div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: ATTACK GRAPH ──────────────────────────────────────── -->
+  <div class="panel" id="panel-attackgraph">
+    <div class="panel-head">
+      <div class="panel-title">🕸️ Attack Chain Graph</div>
+      <div class="panel-sub">Interactive visualization of how vulnerabilities chain together</div>
+    </div>
+    <div class="card" style="min-height:500px;position:relative;">
+      <canvas id="attack-graph-canvas" style="width:100%;height:480px;"></canvas>
+      <div id="graph-empty" class="empty-state">Attack chain graph will appear after validation phase.</div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: COMPLIANCE (OWASP TOP 10) ─────────────────────────── -->
+  <div class="panel" id="panel-compliance">
+    <div class="panel-head">
+      <div class="panel-title">📋 OWASP Top 10 Compliance Scorecard</div>
+      <div class="panel-sub">Mapping findings to OWASP Top 10 (2021) categories</div>
+    </div>
+    <div class="card" id="owasp-scorecard">
+      <table class="owasp-table" id="owasp-table">
+        <thead>
+          <tr>
+            <th>OWASP Category</th>
+            <th>Status</th>
+            <th>Findings</th>
+            <th>CVSS</th>
+          </tr>
+        </thead>
+        <tbody id="owasp-tbody">
+        </tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top:20px;" id="owasp-summary-card">
+      <div class="card-title">Compliance Score</div>
+      <div id="owasp-score-bar" class="owasp-score-bar"></div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: LOGS ───────────────────────────────────────────────── -->
+  <div class="panel" id="panel-logs">
+    <div class="panel-head">
+      <div class="panel-title">Agent Activity Log</div>
+      <div class="panel-sub">Full reasoning chain — Thought → Action → Result</div>
+    </div>
+    <div id="log-list" class="log-container">
+      <div class="empty-state">Activity log will appear here during engagement.</div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: REPORT ─────────────────────────────────────────────── -->
+  <div class="panel" id="panel-report">
+    <div class="panel-head">
+      <div class="panel-title">Generated Report</div>
+      <div class="panel-sub">Auto-generated pentest report</div>
+    </div>
+    <!-- AI Executive Summary -->
+    <div class="card exec-summary-card" id="exec-summary-card" style="display:none;">
+      <div class="card-title">🧠 AI Executive Summary</div>
+      <p id="exec-summary-text" class="exec-summary-text"></p>
+    </div>
+    <div id="report-frame-container" style="height: calc(100vh - 300px);">
+      <div class="empty-state">Report will be available after the engagement completes.</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── XSS PANEL (inside main flow) ─────────────────────────────── -->
+<div class="panel" id="panel-xss" style="display:none;">
+  <div class="panel-head">
+    <div class="panel-title">🔐 XSS Attack Vectors</div>
+    <div class="panel-sub">Cross-Site Scripting — Reflected &amp; Stored attack results</div>
+  </div>
+  <div class="two-col" style="grid-template-columns:1fr 1fr;margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">⚡ Reflected XSS</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.7;">
+        Payload injected via URL parameter. Executes immediately in the victim's browser when they click a crafted link.
+        Target: <code style="color:var(--low)">/api/v1/greet?name=&lt;payload&gt;</code>
+      </p>
+      <div id="xss-reflected-status" class="xss-status-box">Run a scan to test.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">☠️ Stored XSS</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.7;">
+        Payload saved to database, executes for <em>every</em> user who views the page. More dangerous — no user interaction needed.
+        Target: <code style="color:var(--low)">POST /api/v1/comment</code>
+      </p>
+      <div id="xss-stored-status" class="xss-status-box">Run a scan to test.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🧪 XSS Payload Arsenal</div>
+    <div class="xss-payload-grid" id="xss-payload-grid">
+      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;script&gt;alert('XSS')&lt;/script&gt;">Script tag</div>
+      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;img src=x onerror=alert(1)&gt;">img onerror</div>
+      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;svg onload=alert(1)&gt;">SVG onload</div>
+      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="'&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;">Attr breakout</div>
+      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="javascript:alert(document.cookie)">JS URI</div>
+      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;body onload=alert(document.cookie)&gt;">Cookie theft</div>
+      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;iframe src=javascript:alert('XSS')&gt;&lt;/iframe&gt;">iFrame</div>
+      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;input autofocus onfocus=alert(1)&gt;">Autofocus</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px;">💡 Click any chip to copy payload to clipboard</div>
+  </div>
+  <div id="xss-findings-list"></div>
+</div>
+
+<!-- ── TERMINAL HACKER VIEW OVERLAY ────────────────────────────────── -->
+<div id="terminal-overlay" class="terminal-overlay" style="display:none;">
+  <canvas id="matrix-canvas" class="matrix-canvas"></canvas>
+  <div class="terminal-scanlines"></div>
+  <div class="terminal-container">
+    <div class="terminal-header">
+      <div class="terminal-dots">
+        <span class="dot dot-red"></span>
+        <span class="dot dot-yellow"></span>
+        <span class="dot dot-green"></span>
+      </div>
+      <div class="terminal-title">AXIOM RED // AI Red Team Console // root@axiom:~#</div>
+      <button class="terminal-close" onclick="toggleTerminalView()">✕ Exit</button>
+    </div>
+    <div class="terminal-body" id="terminal-body">
+      <div class="terminal-banner">
+        <pre class="ascii-art">
+  ___  _  _____ ___  __  __   ____  _____ ____
+ / _ \| |/ /_ _/ _ \|  \/  | |  _ \| ____|  _ \
+| |_| | ' / | | | | | |\/| | | |_) |  _| | | | |
+|  _  | . \ | | |_| | |  | | |  _ &lt;| |___| |_| |
+|_| |_|_|\_\___\___/|_|  |_| |_| \_\_____|____/
+        </pre>
+        <div class="terminal-tagline">AI-Powered Autonomous Red Team Agent v2.0 // AXIOM RED</div>
+      </div>
+      <div id="terminal-lines"></div>
+      <div class="terminal-prompt">
+        <span class="prompt-symbol">root@axiom:~#</span>
+        <span class="terminal-cursor">█</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
