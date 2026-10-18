@@ -117,6 +117,15 @@ async def root():
     return HTMLResponse("<h1>AXIOM RED API running</h1>")
 
 
+@app.get("/style.css")
+async def _dashboard_css():
+    return FileResponse(os.path.join(DASHBOARD_DIR, "style.css"), media_type="text/css")
+
+@app.get("/app.js")
+async def _dashboard_js():
+    return FileResponse(os.path.join(DASHBOARD_DIR, "app.js"), media_type="application/javascript")
+
+
 @app.post("/api/scan/start")
 async def start_scan(req: StartScanRequest):
     from agent.core.state import AgentState

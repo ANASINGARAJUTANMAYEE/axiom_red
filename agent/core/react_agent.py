@@ -23,10 +23,12 @@ def get_llm():
     provider = os.getenv("LLM_PROVIDER", "gemini").lower()
     if provider == "openai":
         from langchain_openai import ChatOpenAI
-        return ChatOpenAI(model="gpt-4o", temperature=0.1)
+        model = os.getenv("OPENAI_MODEL", "gpt-4o")
+        return ChatOpenAI(model=model, temperature=0.1)
     else:
         from langchain_google_genai import ChatGoogleGenerativeAI
-        return ChatGoogleGenerativeAI(model="gemini-3.8-flash", temperature=0.1)
+        model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+        return ChatGoogleGenerativeAI(model=model, temperature=0.1)
 
 
 SYSTEM_PROMPT = """You are AXIOM RED, an elite AI red team operator. 
@@ -35,11 +37,52 @@ You must be precise, technical, and strategic.
 Return ONLY valid JSON — never include markdown fences or extra text."""
 
 
+def _invoke_json(llm, prompt: str, system: str = None):
+    """Invoke the LLM and parse a JSON object/array, tolerating markdown fences."""
+    sys_msg = system if system is not None else SYSTEM_PROMPT
+    resp = llm.invoke([SystemMessage(content=sys_msg), HumanMessage(content=prompt)])
+    raw = (resp.content or "").strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    return json.loads(raw.strip())
+
+
+def _rule_based_summary(state) -> str:
+    ports = ", ".join(str(p.get("port")) for p in state.open_ports) or "none detected"
+    n_ep = len(state.web_endpoints)
+    techs = "; ".join(state.technologies[:4]) or "unidentified"
+    return (f"Automated recon identified {len(state.open_ports)} open port(s) ({ports}) "
+            f"and {n_ep} reachable endpoint(s). Detected: {techs}. "
+            f"Proceeding to rule-based attack planning.")
+
+
+def _rule_based_exec_summary(state) -> str:
+    crit = sum(1 for f in state.findings if f.severity == "Critical")
+    high = sum(1 for f in state.findings if f.severity == "High")
+    titles = ", ".join(f.title for f in state.findings) or "no confirmed findings"
+    return (f"The assessment of {state.target} identified {len(state.findings)} confirmed "
+            f"vulnerability(ies): {crit} Critical and {high} High severity. Findings: {titles}. "
+            f"Immediate remediation of all Critical items is recommended, followed by a "
+            f"re-test to confirm closure. See the technical findings section for evidence and fixes.")
+
+
 # ── Node 1: RECON ─────────────────────────────────────────────────────────────
 _on_state_update_ref = None  # thread-local callback set before each run
 
 def node_recon(state: AgentState) -> AgentState:
     """Run automated recon tools and populate attack surface data."""
+    from agent.core.scope import assert_in_scope, ScopeError
+    try:
+        assert_in_scope(state.target, state.scope)
+    except ScopeError as e:
+        state.error = str(e)
+        state.done = True
+        state.activity_log.append(ActivityLog(
+            phase="RECON", action="Scope check failed — engagement aborted",
+            result=str(e), status="error"))
+        return state
     return run_recon(state, on_update=_on_state_update_ref)
 
 
@@ -74,17 +117,7 @@ Return a JSON object with:
 }}
 """
     try:
-        response = llm.invoke([
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=prompt)
-        ])
-        raw = response.content.strip()
-        # Strip markdown fences if present
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        data = json.loads(raw)
+        data = _invoke_json(llm, prompt)
         state.attack_surface_summary = data.get("attack_surface_summary", "")
         state.activity_log.append(ActivityLog(
             phase="ANALYSE",
@@ -95,9 +128,10 @@ Return a JSON object with:
             status="finding"
         ))
     except Exception as e:
-        state.attack_surface_summary = f"Analysis error: {e}"
+        state.attack_surface_summary = _rule_based_summary(state)
         state.activity_log.append(ActivityLog(
-            phase="ANALYSE", action="LLM analysis", result=str(e), status="error"
+            phase="ANALYSE", action="LLM analysis unavailable — used rule-based summary",
+            result=f"(LLM error logged internally: {type(e).__name__})", status="error"
         ))
 
     state.phase_complete["ANALYSE"] = True
@@ -115,6 +149,15 @@ You are planning a penetration test. Based on the attack surface analysis, creat
 
 ATTACK SURFACE SUMMARY:
 {state.attack_surface_summary}
+
+OPEN PORTS:
+{json.dumps(state.open_ports, indent=2)}
+
+DISCOVERED ENDPOINTS:
+{chr(10).join(state.web_endpoints[:30])}
+
+TECHNOLOGIES:
+{chr(10).join(state.technologies)}
 
 TARGET BASE URL: {state.target}
 
@@ -138,19 +181,13 @@ Return a JSON array of attack steps, ordered by priority (highest impact first):
   }}
 ]
 
-Include ALL relevant vectors. Be aggressive but stay within the defined attack surface.
+Select ONLY the vectors justified by the recon evidence above, and justify each in 'rationale'.
+Skip any vector whose prerequisite is absent (e.g. do NOT include redis_rce if port 6379 is not open;
+do NOT include a web vector for an endpoint that was not discovered). Prefer fewer, higher-confidence
+vectors over testing everything. Order by expected impact.
 """
     try:
-        response = llm.invoke([
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=prompt)
-        ])
-        raw = response.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        plan = json.loads(raw)
+        plan = _invoke_json(llm, prompt)
         state.attack_plan = plan if isinstance(plan, list) else []
         state.activity_log.append(ActivityLog(
             phase="PLAN",
@@ -185,6 +222,16 @@ def node_test(state: AgentState) -> AgentState:
     base_url = state.target.rstrip("/")
     host = base_url.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
 
+    from agent.core.scope import assert_in_scope, ScopeError
+    try:
+        assert_in_scope(base_url, state.scope)
+    except ScopeError as e:
+        state.error = str(e)
+        state.done = True
+        state.activity_log.append(ActivityLog(
+            phase="TEST", action="Scope check failed — attacks aborted",
+            result=str(e), status="error"))
+        return state
     ATTACK_MAP = {
         "sqli":           lambda step: test_sqli(base_url, step.get("target_endpoint","/api/v1/search"), step.get("param","q")),
         "idor":           lambda step: test_idor(base_url, "/api/v1/users/<id>"),
@@ -318,16 +365,7 @@ Return JSON:
 }}
 """
     try:
-        response = llm.invoke([
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=prompt)
-        ])
-        raw = response.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        data = json.loads(raw)
+        data = _invoke_json(llm, prompt)
 
         chains = data.get("attack_chains", [])
         if isinstance(chains, list):
@@ -377,8 +415,8 @@ Keep it non-technical, professional, and under 200 words. Do NOT use markdown fo
             HumanMessage(content=prompt)
         ])
         return response.content.strip()
-    except Exception as e:
-        return f"Executive summary generation failed: {e}"
+    except Exception:
+        return _rule_based_exec_summary(state)
 
 
 def node_report(state: AgentState) -> AgentState:

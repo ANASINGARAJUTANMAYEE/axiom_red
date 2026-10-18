@@ -10,14 +10,17 @@ Vulnerabilities included:
 """
 
 from flask import Flask, request, jsonify, send_from_directory
-import sqlite3, jwt, os, subprocess, json
+import sqlite3, jwt, os, subprocess, json, tempfile
 
 app = Flask(__name__)
 SECRET_KEY = "supersecret123"  # Intentionally weak
 
+_TMPDIR = tempfile.gettempdir()
+_DB_PATH = os.path.join(_TMPDIR, "users.db")
+
 # ── Database setup ───────────────────────────────────────────────────────────
 def init_db():
-    conn = sqlite3.connect("/tmp/users.db")
+    conn = sqlite3.connect(_DB_PATH)
     c = conn.cursor()
     c.execute("""CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY,
@@ -55,7 +58,7 @@ def index():
 @app.route("/api/v1/users/<int:user_id>")
 def get_user(user_id):
     """No authorization check — any ID returns full PII data."""
-    conn = sqlite3.connect("/tmp/users.db")
+    conn = sqlite3.connect(_DB_PATH)
     c = conn.cursor()
     c.execute("SELECT * FROM users WHERE id=?", (user_id,))
     row = c.fetchone()
@@ -72,7 +75,7 @@ def get_user(user_id):
 def search():
     """Unsanitised query parameter directly embedded in SQL."""
     q = request.args.get("q", "")
-    conn = sqlite3.connect("/tmp/users.db")
+    conn = sqlite3.connect(_DB_PATH)
     c = conn.cursor()
     try:
         # Intentionally vulnerable: f-string in SQL
@@ -90,7 +93,7 @@ def login():
     data = request.get_json() or {}
     username = data.get("username", "")
     password = data.get("password", "")
-    conn = sqlite3.connect("/tmp/users.db")
+    conn = sqlite3.connect(_DB_PATH)
     c = conn.cursor()
     c.execute("SELECT id, name, role FROM users WHERE name=? AND password=?", (username, password))
     row = c.fetchone()
@@ -115,7 +118,7 @@ def admin_panel():
         # Intentionally vulnerable: algorithms=["HS256","none"]
         payload = jwt.decode(token, options={"verify_signature": False}, algorithms=["HS256", "none"])
         if payload.get("role") == "admin":
-            conn = sqlite3.connect("/tmp/users.db")
+            conn = sqlite3.connect(_DB_PATH)
             c = conn.cursor()
             c.execute("SELECT * FROM users")
             rows = c.fetchall()
@@ -135,8 +138,9 @@ def ping():
     host = request.args.get("host", "127.0.0.1")
     try:
         # Intentionally vulnerable: shell=True with user input
+        ping_flag = "-n" if os.name == "nt" else "-c"
         result = subprocess.check_output(
-            f"ping -c 1 {host}", shell=True, stderr=subprocess.STDOUT, timeout=5
+            f"ping {ping_flag} 1 {host}", shell=True, stderr=subprocess.STDOUT, timeout=5
         )
         return jsonify({"output": result.decode()})
     except Exception as e:
@@ -157,7 +161,7 @@ def config():
     })
 
 # ── VULN 7: Unrestricted File Upload ─────────────────────────────────────────
-UPLOAD_DIR = "/tmp/uploads"
+UPLOAD_DIR = os.path.join(_TMPDIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.route("/api/v1/upload", methods=["POST"])

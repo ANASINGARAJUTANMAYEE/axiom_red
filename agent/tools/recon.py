@@ -73,8 +73,9 @@ def discover_endpoints(base_url: str, timeout: float = 2.0) -> list[str]:
         for path in COMMON_PATHS:
             try:
                 r = client.get(f"{base}{path}")
-                if r.status_code not in (404, 403):
-                    found.append(f"{base}{path} [{r.status_code}]")
+                if r.status_code != 404:
+                    tag = " [auth-gated]" if r.status_code in (401, 403) else ""
+                    found.append(f"{base}{path} [{r.status_code}]{tag}")
             except Exception:
                 pass
     return found
@@ -91,6 +92,10 @@ def fingerprint_tech(base_url: str) -> list[str]:
 
             if server := headers.get("server"):
                 techs.append(f"Server: {server}")
+                if "werkzeug" in server.lower():
+                    techs.append("Framework: Flask (Werkzeug)")
+                if "gunicorn" in server.lower():
+                    techs.append("Server stack: Gunicorn")
             if powered := headers.get("x-powered-by"):
                 techs.append(f"X-Powered-By: {powered}")
             if "flask" in r.text.lower():

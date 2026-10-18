@@ -4,7 +4,7 @@ Defines the shared state object that flows through every node of the LangGraph.
 """
 
 from typing import Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 import uuid
 
@@ -90,5 +90,4 @@ class AgentState(BaseModel):
         "Encryption": 0.0, "Access Control": 0.0, "Data Exposure": 0.0
     })
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)

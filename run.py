@@ -340,7 +340,6 @@ def cmd_scan(args):
     info("This runs the agent directly — no backend / WebSocket needed.\n")
 
     try:
-        from agent.core.react_agent import run_agent
         from rich.console import Console
         from rich.table import Table
         from rich import box

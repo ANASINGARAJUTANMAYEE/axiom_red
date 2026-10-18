@@ -70,6 +70,7 @@ Targets will be available at:
 
 ```bash
 # Open the dashboard directly in browser (demo mode — no backend needed)
+# styling/JS load via relative paths; no backend needed for demo mode
 start dashboard/index.html
 
 # OR run the full backend + dashboard
@@ -120,7 +121,7 @@ axiom-red/
 
 | Layer | Technology |
 |---|---|
-| LLM | Google Gemini 1.5 Pro / GPT-4o |
+| LLM | Google Gemini (Flash, configurable via GEMINI_MODEL) / OpenAI GPT-4o |
 | Agent Framework | LangChain + LangGraph |
 | Language | Python 3.11 |
 | Backend | FastAPI + WebSocket |
@@ -140,13 +141,14 @@ axiom-red/
 | F-004 | SQL Injection | 9.1 Critical | /api/v1/search |
 | F-005 | Sensitive Config Exposure | 7.7 High | /api/v1/config |
 | F-006 | IDOR / PII Exposure | 7.5 High | /api/v1/users |
+| F-007 | XSS — Reflected (+ Stored) | 8.8 Critical / 7.2 High | /api/v1/greet, /api/v1/comment |
 
 ---
 
 ## Ethics & Safety
 
 - **All targets are isolated Docker containers** — no external systems are ever touched
-- Agent is hardcoded to only operate on the whitelisted sandbox network
+- Scope is enforced fail-closed via `agent/core/scope.py`; out-of-scope hosts abort the engagement
 - Evidence is stored locally only, never transmitted
 - Tool is intended for authorised security research and education only
 
