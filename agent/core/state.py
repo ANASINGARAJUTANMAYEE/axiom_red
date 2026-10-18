@@ -59,6 +59,7 @@ class AgentState(BaseModel):
     web_endpoints: list[str] = Field(default_factory=list)
     technologies: list[str] = Field(default_factory=list)
     subdomains: list[str] = Field(default_factory=list)
+    endpoint_params: dict = Field(default_factory=dict)   # Phase 2: {endpoint_path: [param,...]}
 
     # ── Attack surface / plan ────────────────────────────────────────
     attack_surface_summary: str = ""

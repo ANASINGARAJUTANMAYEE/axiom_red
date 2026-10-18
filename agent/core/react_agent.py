@@ -13,7 +13,8 @@ from agent.core.state import AgentState, ActivityLog, Finding
 from agent.tools.recon import run_recon
 from agent.tools.attacks import (
     test_sqli, test_idor, test_jwt_none,
-    test_command_injection, test_config_exposure, test_redis_rce, test_xss
+    test_command_injection, test_config_exposure, test_redis_rce, test_xss,
+    test_jwt_forge,
 )
 from agent.reporting.report_gen import generate_report
 
@@ -73,14 +74,15 @@ import re as _re
 # Phase 2 adds "jwt_forge" to this set when the tool lands.
 IMPLEMENTED_VECTORS = {
     "sqli", "idor", "jwt_none", "cmd_injection",
-    "config_exposure", "redis_rce", "xss",
+    "config_exposure", "redis_rce", "xss", "jwt_forge",
 }
 
 # Declarative unlocks: which artifact key makes which NEW vector worth testing.
 # (artifact_key, vector_to_unlock, human_rationale)
 # Phase 2 appends ("jwt_secret", "jwt_forge", "...") here.
 UNLOCK_RULES = [
-    # populated by later phases; Phase 1 ships the mechanism.
+    ("jwt_secret", "jwt_forge",
+     "Recovered JWT signing secret enables forging a validly-signed admin token."),
 ]
 
 def _extract_artifacts(finding) -> dict:
@@ -287,6 +289,36 @@ vectors over testing everything. Order by expected impact.
     state.current_phase = "TEST"
     return state
 
+def _candidates_for(state, vector: str, step: dict) -> list:
+    """Build bounded (endpoint, param) candidates for an injectable vector from discovered params."""
+    planned = (step.get("target_endpoint"), step.get("param"))
+    cands = []
+    if planned[0] and planned[1]:
+        cands.append(planned)
+    for path, params in (state.endpoint_params or {}).items():
+        ep = "/" + path.split("/", 3)[-1] if path.startswith("http") else path  # path portion
+        for p in params:
+            cands.append((ep, p))
+    # dedup, drop empties, cap to keep the engagement fast
+    seen, out = set(), []
+    for ep, p in cands:
+        if ep and p and (ep, p) not in seen:
+            seen.add((ep, p)); out.append((ep, p))
+        if len(out) >= 15:
+            break
+    return out or [(step.get("target_endpoint", "/"), step.get("param", "q"))]
+
+def _first_finding(single_fn, candidates):
+    """Run single_fn(endpoint, param) over candidates; return the first confirmed Finding."""
+    for ep, p in candidates:
+        try:
+            f = single_fn(ep, p)
+            if f:
+                return f
+        except Exception:
+            pass
+    return None
+
 
 # ── Node 4: TEST ──────────────────────────────────────────────────────────────
 def node_test(state: AgentState) -> AgentState:
@@ -305,13 +337,14 @@ def node_test(state: AgentState) -> AgentState:
             result=str(e), status="error"))
         return state
     ATTACK_MAP = {
-        "sqli":           lambda step: test_sqli(base_url, step.get("target_endpoint","/api/v1/search"), step.get("param","q")),
+        "sqli":           lambda step: _first_finding(lambda ep, p: test_sqli(base_url, ep, p), _candidates_for(state, "sqli", step)),
         "idor":           lambda step: test_idor(base_url, "/api/v1/users/<id>"),
         "jwt_none":       lambda step: test_jwt_none(base_url, step.get("target_endpoint","/api/v1/admin")),
-        "cmd_injection":  lambda step: test_command_injection(base_url, step.get("target_endpoint","/api/v1/ping"), step.get("param","host")),
+        "cmd_injection":  lambda step: _first_finding(lambda ep, p: test_command_injection(base_url, ep, p), _candidates_for(state, "cmd_injection", step)),
         "config_exposure":lambda step: test_config_exposure(base_url, step.get("target_endpoint","/api/v1/config")),
         "redis_rce":      lambda step: test_redis_rce(host),
-        "xss":            lambda step: test_xss(base_url, step.get("target_endpoint","/api/v1/greet"), step.get("param","name")),
+        "xss":            lambda step: _first_finding(lambda ep, p: test_xss(base_url, ep, p), _candidates_for(state, "xss", step)),
+        "jwt_forge":      lambda step: test_jwt_forge(base_url, step.get("target_endpoint","/api/v1/admin"), state.knowledge_base.get("jwt_secret")),
     }
 
     for step in sorted(state.attack_plan, key=lambda x: x.get("priority", 99)):
@@ -500,6 +533,14 @@ Return JSON:
         state.activity_log.append(ActivityLog(
             phase="VALIDATE", action="Validation", result=str(e), status="error"
         ))
+
+    # Phase 2: always record the artifact chain if the forge fired
+    if any("Forgery" in f.title for f in state.findings) and any("Configuration Exposure" in f.title for f in state.findings):
+        edge = {"from_node": "Sensitive Configuration Exposure",
+                "to_node": "JWT Forgery via Leaked Secret (chained)",
+                "label": "leaked jwt_secret \u2192 forged admin token"}
+        if edge not in state.attack_chains:
+            state.attack_chains.append(edge)
 
     state.phase_complete["VALIDATE"] = True
     state.current_phase = "REPORT"

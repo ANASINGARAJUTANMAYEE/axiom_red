@@ -6,7 +6,9 @@ Phase 1: Attack surface discovery — ports, services, endpoints, tech fingerpri
 import socket
 import httpx
 import json
+import re
 from typing import Optional
+from urllib.parse import urlparse, parse_qs
 from agent.core.state import AgentState, ActivityLog
 
 
@@ -79,6 +81,27 @@ def discover_endpoints(base_url: str, timeout: float = 2.0) -> list[str]:
             except Exception:
                 pass
     return found
+
+
+def discover_params(base_url: str, endpoints: list[str], timeout: float = 3.0) -> dict:
+    """Return {endpoint_path: [param,...]} from query strings, HTML forms, JSON/body hints, + fallback."""
+    COMMON = ["q", "id", "host", "name", "search", "user", "file", "url", "cmd", "page", "query", "input"]
+    out = {}
+    with httpx.Client(timeout=timeout, verify=False, follow_redirects=True) as c:
+        for ep in endpoints:
+            path = ep.split()[0] if " " in ep else ep          # strip "[200]"/"[auth-gated]" tags
+            found = set(parse_qs(urlparse(path).query).keys())  # params already in the URL
+            try:
+                r = c.get(path)
+                body = r.text
+                for m in re.finditer(r'name=["\']([\w\-]+)["\']', body):   # HTML form fields
+                    found.add(m.group(1))
+                for m in re.finditer(r'[?&]([\w\-]+)=', body):             # URL hints in body
+                    found.add(m.group(1))
+            except Exception:
+                pass
+            out[path] = sorted(found) if found else COMMON[:4]
+    return out
 
 
 # ── Technology Fingerprinting ────────────────────────────────────────────────
@@ -184,6 +207,14 @@ def run_recon(state: AgentState, on_update=None) -> AgentState:
         result=f"Found {len(endpoints)} live endpoints",
         status="finding" if endpoints else "ok"
     ))
+    _push()
+
+    # 2.5 Phase 2: discover accepted parameters per endpoint
+    state.endpoint_params = discover_params(target, state.web_endpoints)
+    state.activity_log.append(ActivityLog(
+        phase="RECON", action="Parameter discovery complete",
+        result=f"Mapped params for {len(state.endpoint_params)} endpoint(s)",
+        status="ok"))
     _push()
 
     # 3. Tech fingerprint

