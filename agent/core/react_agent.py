@@ -67,6 +67,78 @@ def _rule_based_exec_summary(state) -> str:
             f"Immediate remediation of all Critical items is recommended, followed by a "
             f"re-test to confirm closure. See the technical findings section for evidence and fixes.")
 
+import re as _re
+
+# Vectors that have a real implementation in ATTACK_MAP (node_test).
+# Phase 2 adds "jwt_forge" to this set when the tool lands.
+IMPLEMENTED_VECTORS = {
+    "sqli", "idor", "jwt_none", "cmd_injection",
+    "config_exposure", "redis_rce", "xss",
+}
+
+# Declarative unlocks: which artifact key makes which NEW vector worth testing.
+# (artifact_key, vector_to_unlock, human_rationale)
+# Phase 2 appends ("jwt_secret", "jwt_forge", "...") here.
+UNLOCK_RULES = [
+    # populated by later phases; Phase 1 ships the mechanism.
+]
+
+def _extract_artifacts(finding) -> dict:
+    """Pull structured artifacts (secrets, creds, usernames) out of a finding's text."""
+    blob = " ".join(str(x) for x in [
+        finding.evidence or "", finding.description or "",
+        finding.response_dump or "", finding.payload or "",
+    ])
+    arts = {}
+    # JSON-style "key": "value" secrets commonly leaked by /config
+    for key in ("jwt_secret", "db_pass", "db_user", "db_host",
+                "internal_api_key", "api_key", "secret"):
+        m = _re.search(rf'"{key}"\s*:\s*"([^"]+)"', blob)
+        if m:
+            arts[key] = m.group(1)
+    # Usernames / emails surfaced by IDOR or SQLi
+    emails = _re.findall(r'[\w.+-]+@[\w-]+\.[\w.-]+', blob)
+    if emails:
+        arts["emails"] = sorted(set(emails))[:20]
+    # Record which endpoint produced value, useful for chaining
+    if finding.endpoint:
+        arts.setdefault("hot_endpoints", [])
+    return arts
+
+def _merge_kb(state, new_arts: dict) -> list[str]:
+    """Merge artifacts into state.knowledge_base; return list of newly-added keys for logging."""
+    added = []
+    for k, v in new_arts.items():
+        if k == "emails":
+            prev = set(state.knowledge_base.get("emails", []))
+            merged = sorted(prev.union(v))
+            if merged != sorted(prev):
+                state.knowledge_base["emails"] = merged
+                added.append(f"emails(+{len(set(v) - prev)})")
+        elif k not in state.knowledge_base:
+            state.knowledge_base[k] = v
+            added.append(k)
+    return added
+
+def _unlocked_vectors(state) -> list[dict]:
+    """Return attack-plan steps unlocked by current KB that are implemented and untested."""
+    steps = []
+    for art_key, vector, rationale in UNLOCK_RULES:
+        if (art_key in state.knowledge_base
+                and vector in IMPLEMENTED_VECTORS
+                and vector not in state.tested_vectors
+                and not any(s.get("vector") == vector for s in state.attack_plan
+                            if s.get("vector") not in state.tested_vectors)):
+            steps.append({
+                "vector": vector,
+                "priority": 0,  # run unlocked steps first on the next pass
+                "target_endpoint": "",
+                "param": "",
+                "rationale": rationale,
+                "unlocked_by": art_key,
+            })
+    return steps
+
 
 # ── Node 1: RECON ─────────────────────────────────────────────────────────────
 _on_state_update_ref = None  # thread-local callback set before each run
@@ -284,6 +356,47 @@ def node_test(state: AgentState) -> AgentState:
         state.tested_vectors.append(vector)
 
     state.phase_complete["TEST"] = True
+    state.current_phase = "REFLECT"
+    return state
+
+
+# ── Node 4.5: REFLECT (adaptive re-plan) ──────────────────────────────────────
+def node_reflect(state: AgentState) -> AgentState:
+    """Extract artifacts from findings, decide whether a new attack is unlocked, loop if so."""
+    # 1. Harvest artifacts from every finding into the knowledge base.
+    all_added = []
+    for f in state.findings:
+        added = _merge_kb(state, _extract_artifacts(f))
+        all_added.extend(added)
+    if all_added:
+        msg = f"Knowledge base updated: {', '.join(all_added)}"
+        state.kb_log.append(msg)
+        state.activity_log.append(ActivityLog(
+            phase="REFLECT", thought="New artifacts recovered from findings.",
+            action="Belief state updated", result=msg, status="finding"))
+
+    # 2. Does the enriched KB unlock a new, implemented, untested vector?
+    unlocked = _unlocked_vectors(state)
+
+    if unlocked and state.replan_count < state.max_replans:
+        state.replan_count += 1
+        state.attack_plan.extend(unlocked)
+        names = [u["vector"] for u in unlocked]
+        state.activity_log.append(ActivityLog(
+            phase="REFLECT",
+            thought=f"Artifact(s) {[u['unlocked_by'] for u in unlocked]} unlock new vector(s) "
+                    f"{names}. Re-planning (pass {state.replan_count}/{state.max_replans}).",
+            action="Adaptive re-plan \u2014 looping back to TEST",
+            result=f"Queued: {names}", status="finding"))
+        state.current_phase = "TEST"
+        return state
+
+    # 3. Nothing new to try (or ceiling reached) \u2014 proceed to validation.
+    reason = "re-plan ceiling reached" if state.replan_count >= state.max_replans else \
+             "no new attack unlocked by current evidence"
+    state.activity_log.append(ActivityLog(
+        phase="REFLECT", thought=f"Reflection complete \u2014 {reason}.",
+        action="No further adaptation needed", result="Proceeding to validation", status="ok"))
     state.current_phase = "VALIDATE"
     return state
 
@@ -453,7 +566,7 @@ def node_report(state: AgentState) -> AgentState:
 
 
 # ── Routing ───────────────────────────────────────────────────────────────────
-def route_phase(state: AgentState) -> Literal["analyse", "plan", "test", "validate", "report", "__end__"]:
+def route_phase(state: AgentState) -> Literal["analyse", "plan", "test", "reflect", "validate", "report", "__end__"]:
     """
     Fix Bug 6: This function is now properly wired into the graph via
     add_conditional_edges so early-exit on state.done / state.error works.
@@ -465,6 +578,7 @@ def route_phase(state: AgentState) -> Literal["analyse", "plan", "test", "valida
         "ANALYSE": "analyse",
         "PLAN":    "plan",
         "TEST":    "test",
+        "REFLECT": "reflect",
         "VALIDATE":"validate",
         "REPORT":  "report",
     }.get(phase, END)
@@ -494,6 +608,7 @@ def build_agent() -> StateGraph:
     graph.add_node("analyse",  adapt(node_analyse))
     graph.add_node("plan",     adapt(node_plan))
     graph.add_node("test",     adapt(node_test))
+    graph.add_node("reflect",  adapt(node_reflect))
     graph.add_node("validate", adapt(node_validate))
     graph.add_node("report",   adapt(node_report))
 
@@ -510,7 +625,11 @@ def build_agent() -> StateGraph:
     )
     graph.add_conditional_edges(
         "test", adapt_route(route_phase),
-        {"validate": "validate", "__end__": END}
+        {"reflect": "reflect", "__end__": END}
+    )
+    graph.add_conditional_edges(
+        "reflect", adapt_route(route_phase),
+        {"test": "test", "validate": "validate", "__end__": END}
     )
     graph.add_conditional_edges(
         "validate", adapt_route(route_phase),

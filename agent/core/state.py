@@ -78,6 +78,12 @@ class AgentState(BaseModel):
     error: Optional[str] = None
     report_path: Optional[str] = None
 
+    # ── Phase 1: Adaptive loop — knowledge base (belief state) ───────
+    knowledge_base: dict = Field(default_factory=dict)   # artifacts: secrets, creds, usernames, endpoints
+    replan_count: int = 0
+    max_replans: int = 2                                 # hard ceiling on reflect→test loops
+    kb_log: list[str] = Field(default_factory=list)      # human-readable trail of KB additions (for demo/UI)
+
     # ── Innovation: AI Executive Summary ─────────────────────────────
     executive_summary: str = ""
 

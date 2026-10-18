@@ -172,6 +172,7 @@ function renderState(s) {
   renderRecon(s);
   renderFindings(findings);
   renderLogs(logs);
+  renderKnowledgeBase(s.knowledge_base || {}, s.kb_log || []);
   renderRadarChart(s.risk_scores || {});
   renderAttackGraph(s.attack_chains || [], findings);
   renderOWASPScorecard(findings);
@@ -659,6 +660,27 @@ function setStatus(type, text) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────
+function renderKnowledgeBase(kb, kbLog) {
+  let host = document.getElementById("kb-panel");
+  if (!host) {
+    // lazily inject a small KB card into the dashboard feed column
+    const feed = document.querySelector(".live-feed-card") || document.querySelector(".main");
+    if (!feed) return;
+    host = document.createElement("div");
+    host.id = "kb-panel";
+    host.className = "card";
+    host.style.cssText = "margin-top:16px;";
+    host.innerHTML = '<div class="card-title">🧠 Belief State (Knowledge Base)</div><div id="kb-body"></div>';
+    feed.appendChild(host);
+  }
+  const body = document.getElementById("kb-body");
+  const keys = Object.keys(kb);
+  body.innerHTML = keys.length
+    ? keys.map(k => `<div class="mono-item"><span style="color:var(--accent2)">${escHtml(k)}</span>: ${escHtml(JSON.stringify(kb[k]).slice(0,80))}</div>`).join("")
+      + (kbLog.length ? `<div style="margin-top:8px;font-size:11px;color:var(--muted)">${kbLog.map(escHtml).join("<br>")}</div>` : "")
+    : '<div style="color:var(--muted);font-size:13px">No artifacts recovered yet.</div>';
+}
+
 function escHtml(s) {
   return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
