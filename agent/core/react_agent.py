@@ -24,12 +24,19 @@ def get_llm():
     provider = os.getenv("LLM_PROVIDER", "gemini").lower()
     if provider == "openai":
         from langchain_openai import ChatOpenAI
-        model = os.getenv("OPENAI_MODEL", "gpt-4o")
-        return ChatOpenAI(model=model, temperature=0.1)
-    else:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-        return ChatGoogleGenerativeAI(model=model, temperature=0.1)
+        return ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-4o"), temperature=0.1)
+    if provider == "ollama":
+        try:
+            from langchain_ollama import ChatOllama
+        except Exception:
+            from langchain_community.chat_models import ChatOllama
+        return ChatOllama(
+            model=os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
+            base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+            temperature=0.1,
+        )
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    return ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"), temperature=0.1)
 
 
 SYSTEM_PROMPT = """You are AXIOM RED, an elite AI red team operator. 
@@ -84,6 +91,28 @@ UNLOCK_RULES = [
     ("jwt_secret", "jwt_forge",
      "Recovered JWT signing secret enables forging a validly-signed admin token."),
 ]
+
+VECTOR_IMPACT = {
+    "redis_rce": 10.0, "cmd_injection": 10.0, "jwt_forge": 9.6, "jwt_none": 9.3,
+    "sqli": 9.1, "config_exposure": 7.7, "idor": 7.5, "xss": 7.2,
+}
+
+def score_vector(vector: str, state) -> float:
+    """impact x likelihood(given recon/KB). Deterministic, explainable prioritisation."""
+    impact = VECTOR_IMPACT.get(vector, 5.0)
+    ports = {p.get("port") for p in state.open_ports}
+    eps = " ".join(state.web_endpoints).lower()
+    if vector == "redis_rce":
+        likelihood = 0.95 if 6379 in ports else 0.05
+    elif vector == "config_exposure":
+        likelihood = 0.9 if "config" in eps else 0.4
+    elif vector == "jwt_forge":
+        likelihood = 0.95 if "jwt_secret" in state.knowledge_base else 0.1
+    elif vector == "jwt_none":
+        likelihood = 0.8 if "admin" in eps else 0.4
+    else:
+        likelihood = 0.6
+    return round(impact * likelihood, 2)
 
 def _extract_artifacts(finding) -> dict:
     """Pull structured artifacts (secrets, creds, usernames) out of a finding's text."""
@@ -286,6 +315,19 @@ vectors over testing everything. Order by expected impact.
         ))
 
     state.phase_complete["PLAN"] = True
+
+    # ── Phase 4: Deterministic attack-path scoring ────────────────────
+    for step in state.attack_plan:
+        step["score"] = score_vector(step.get("vector", ""), state)
+    state.attack_plan.sort(key=lambda s: s.get("score", 0), reverse=True)
+    # keep 'priority' consistent with the computed order
+    for i, step in enumerate(state.attack_plan, 1):
+        step["priority"] = i
+    state.activity_log.append(ActivityLog(
+        phase="PLAN", action="Vectors scored (impact x likelihood)",
+        result="; ".join(f"{s['vector']}={s.get('score')}" for s in state.attack_plan),
+        status="ok"))
+
     state.current_phase = "TEST"
     return state
 
@@ -480,7 +522,7 @@ def node_validate(state: AgentState) -> AgentState:
             phase="VALIDATE", action="No findings to validate", result="Clean scan", status="ok"
         ))
         state.phase_complete["VALIDATE"] = True
-        state.current_phase = "REPORT"
+        state.current_phase = "EVIDENCE"
         return state
 
     state.risk_scores = _compute_risk_scores(state.findings)
@@ -543,6 +585,29 @@ Return JSON:
             state.attack_chains.append(edge)
 
     state.phase_complete["VALIDATE"] = True
+    state.current_phase = "EVIDENCE"
+    return state
+
+
+# ── Node 5.5: EVIDENCE (forensic seal) ────────────────────────────────────────
+def node_evidence(state: AgentState) -> AgentState:
+    """Seal the engagement record into a tamper-evident hash chain and export a bundle."""
+    try:
+        from agent.core.evidence import export_bundle
+        import os as _os
+        out_dir = _os.path.join(_os.path.dirname(__file__), "..", "..", "reports")
+        path, root = export_bundle(state, out_dir)
+        state.evidence_root_hash = root
+        state.evidence_path = path
+        state.activity_log.append(ActivityLog(
+            phase="EVIDENCE", thought="Sealing chain-of-custody record.",
+            action="Evidence bundle sealed (SHA-256 chain)",
+            result=f"root={root[:16]}... records sealed; verify with: python verify.py {path}",
+            status="finding"))
+    except Exception as e:
+        state.activity_log.append(ActivityLog(
+            phase="EVIDENCE", action="Evidence sealing failed", result=str(e), status="error"))
+    state.phase_complete["EVIDENCE"] = True
     state.current_phase = "REPORT"
     return state
 
@@ -607,7 +672,7 @@ def node_report(state: AgentState) -> AgentState:
 
 
 # ── Routing ───────────────────────────────────────────────────────────────────
-def route_phase(state: AgentState) -> Literal["analyse", "plan", "test", "reflect", "validate", "report", "__end__"]:
+def route_phase(state: AgentState) -> Literal["analyse", "plan", "test", "reflect", "validate", "evidence", "report", "__end__"]:
     """
     Fix Bug 6: This function is now properly wired into the graph via
     add_conditional_edges so early-exit on state.done / state.error works.
@@ -621,6 +686,7 @@ def route_phase(state: AgentState) -> Literal["analyse", "plan", "test", "reflec
         "TEST":    "test",
         "REFLECT": "reflect",
         "VALIDATE":"validate",
+        "EVIDENCE":"evidence",
         "REPORT":  "report",
     }.get(phase, END)
 
@@ -651,6 +717,7 @@ def build_agent() -> StateGraph:
     graph.add_node("test",     adapt(node_test))
     graph.add_node("reflect",  adapt(node_reflect))
     graph.add_node("validate", adapt(node_validate))
+    graph.add_node("evidence", adapt(node_evidence))
     graph.add_node("report",   adapt(node_report))
 
     # Fix Bug 6: Use conditional edges so done/error flags trigger early exit
@@ -674,6 +741,10 @@ def build_agent() -> StateGraph:
     )
     graph.add_conditional_edges(
         "validate", adapt_route(route_phase),
+        {"evidence": "evidence", "__end__": END}
+    )
+    graph.add_conditional_edges(
+        "evidence", adapt_route(route_phase),
         {"report": "report", "__end__": END}
     )
     graph.add_edge("report", END)

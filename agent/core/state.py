@@ -50,7 +50,7 @@ class AgentState(BaseModel):
     current_phase: str = "RECON"   # RECON → ANALYSE → PLAN → TEST → VALIDATE → REPORT
     phase_complete: dict[str, bool] = Field(default_factory=lambda: {
         "RECON": False, "ANALYSE": False, "PLAN": False,
-        "TEST": False, "VALIDATE": False, "REPORT": False
+        "TEST": False, "VALIDATE": False, "EVIDENCE": False, "REPORT": False
     })
 
     # ── Recon results ────────────────────────────────────────────────
@@ -78,6 +78,8 @@ class AgentState(BaseModel):
     done: bool = False
     error: Optional[str] = None
     report_path: Optional[str] = None
+    evidence_root_hash: str = ""
+    evidence_path: Optional[str] = None
 
     # ── Phase 1: Adaptive loop — knowledge base (belief state) ───────
     knowledge_base: dict = Field(default_factory=dict)   # artifacts: secrets, creds, usernames, endpoints
