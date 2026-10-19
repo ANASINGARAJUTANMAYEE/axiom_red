@@ -20,9 +20,15 @@ def main():
         print(f"[!] File not found: {path}")
         sys.exit(2)
 
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
     res = verify_bundle(path)
     print("=" * 60)
-    print("  AXIOM RED — Evidence Integrity Verification")
+    print("  AXIOM RED -- Evidence Integrity Verification")
     print("=" * 60)
     print(f"  Bundle        : {path}")
     print(f"  Records       : {res['record_count']}")
@@ -30,10 +36,10 @@ def main():
     print(f"  Recomputed    : {res['recomputed_root'][:32]}...")
     print("-" * 60)
     if res["ok"]:
-        print("  RESULT: ✓ INTACT — chain verified, no tampering detected.")
+        print("  RESULT: [OK] INTACT -- chain verified, no tampering detected.")
         sys.exit(0)
     else:
-        print(f"  RESULT: ✗ TAMPERED — first broken record at seq {res['first_bad_seq']}.")
+        print(f"  RESULT: [TAMPERED] -- first broken record at seq {res['first_bad_seq']}.")
         print("  The exported evidence has been altered since sealing.")
         sys.exit(1)
 
