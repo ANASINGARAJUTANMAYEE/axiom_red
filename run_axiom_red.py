@@ -732,7 +732,7 @@ def _show_fallback_models():
     if fallback_str:
         models = [m.strip() for m in fallback_str.split(",") if m.strip()]
     else:
-        primary = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+        primary = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
         models = [primary]
 
     _log(f"  {DIM}Gemini model fallback chain:{RST}")

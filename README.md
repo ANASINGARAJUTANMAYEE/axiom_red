@@ -240,7 +240,7 @@ RESULT: ✗ TAMPERED — first broken record at seq 26.
 | Layer | Technology | Why we chose it |
 |-------|-----------|----------------|
 | **Agent Engine** | 🦜 LangGraph | Native state-machine with conditional edges — the only clean way to build a looping reflect-replan agent (a plain chain can't loop). |
-| **Reasoning** | Gemini 2.5 / GPT-4o / Ollama | Multi-provider with **automatic model fallback** (gemini-2.5-flash → 2.5-pro → 2.0-flash → 1.5-flash → 1.5-pro); Ollama local fallback means the demo survives a dead API key and keeps target data on-prem. |
+| **Reasoning** | Gemini 3.8 / GPT-4o / Ollama | Multi-provider with **automatic Ollama failover** — if Gemini is down or the API key fails, the agent auto-detects a local Ollama server and seamlessly switches to on-prem inference. Zero-config, zero-downtime. |
 | **Backend** | ⚡ FastAPI + WebSocket | Async, thread-safe live streaming of agent state to the dashboard — judges watch it think in real time. |
 | **Attack Tools** | 🐍 Python (httpx, PyJWT, redis-py) | Pure-Python, no external binaries — portable, auditable, reproducible in any sandbox. |
 | **Evidence** | 🔒 hashlib (SHA-256) | Zero-dependency, standards-based tamper-evidence — verifiable by anyone, anywhere. |
@@ -263,7 +263,7 @@ RESULT: ✗ TAMPERED — first broken record at seq 26.
 | 7 | 📡 **Live Reasoning Dashboard** | Streams Thought → Action → Result in real time | Judges see the AI *decide*, with voice + radar + graph |
 | 8 | 📊 **Benchmark Harness** | Scores coverage vs ground truth on Juice Shop/DVWA | A hard number, the way serious tools prove themselves |
 | 9 | 🚀 **One-Command Launcher** | `run_axiom_red.py` — project briefing, dep check, auto-install, launch, live logs, health monitor | Zero-friction demo: one command, everything runs |
-| 10 | 🔄 **Auto Model Fallback** | Tries 5 Gemini model versions automatically if primary is overloaded | Demo never fails due to API quota or model outage |
+| 10 | 🔄 **Auto Ollama Failover** | If Gemini API fails, auto-detects local Ollama and switches seamlessly | Demo never degrades — cloud or local, AI reasoning always runs |
 
 <div align="center">
 
@@ -354,13 +354,13 @@ python verify.py reports/evidence_<session>.json
 
 ### 🔑 LLM Model Fallback
 
-AXIOM RED automatically tries multiple Gemini models if the primary is overloaded:
+AXIOM RED uses `gemini-3.8-flash` by default, with **automatic Ollama failover**:
 
 ```
-gemini-2.5-flash → gemini-2.5-pro → gemini-2.0-flash → gemini-1.5-flash → gemini-1.5-pro
+gemini-3.8-flash → (if all fail) → auto-detect local Ollama → llama3.1:8b
 ```
 
-Configure in `.env` via `GEMINI_FALLBACK_MODELS` or set `LLM_PROVIDER=ollama` for fully offline operation.
+If Gemini is unavailable (API key issues, quota, model deprecation), the agent auto-detects a running Ollama server and seamlessly switches to local inference. Set `LLM_PROVIDER=ollama` in `.env` to force offline operation.
 
 > 💡 **Demo mode:** click **▷ Run Demo** on the dashboard for a full simulated engagement — no backend or API key required.
 

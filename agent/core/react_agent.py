@@ -21,19 +21,42 @@ from agent.reporting.report_gen import generate_report
 
 # ── LLM Setup ────────────────────────────────────────────────────────────────
 _GEMINI_FALLBACK_DEFAULTS = [
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
+    "gemini-3.8-flash",
 ]
+
+
+def _is_ollama_available() -> bool:
+    """Check if a local Ollama server is reachable (non-blocking, fast)."""
+    import urllib.request, urllib.error
+    host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    try:
+        req = urllib.request.Request(f"{host}/api/tags", method="GET")
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
+def _make_ollama_llm():
+    """Create an Ollama LLM instance."""
+    try:
+        from langchain_ollama import ChatOllama
+    except ImportError:
+        from langchain_community.chat_models import ChatOllama
+    model = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+    host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    print(f"  [LLM] Falling back to local Ollama model: {model} at {host}")
+    return ChatOllama(model=model, base_url=host, temperature=0.1)
 
 
 def get_llm():
     """
-    Return an LLM instance. For Gemini, tries multiple model versions in
-    order (GEMINI_FALLBACK_MODELS env var) so the agent survives model
-    outages, quota limits, or version deprecations automatically.
+    Return an LLM instance.  Priority:
+      1. Explicit LLM_PROVIDER=ollama → use Ollama directly
+      2. Explicit LLM_PROVIDER=openai → use OpenAI
+      3. Default (gemini) → try Gemini model(s), if ALL fail AND local
+         Ollama is running, auto-failover to Ollama so the demo never
+         degrades to rule-based fallbacks.
     """
     provider = os.getenv("LLM_PROVIDER", "gemini").lower()
 
@@ -42,15 +65,7 @@ def get_llm():
         return ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-4o"), temperature=0.1)
 
     if provider == "ollama":
-        try:
-            from langchain_ollama import ChatOllama
-        except Exception:
-            from langchain_community.chat_models import ChatOllama
-        return ChatOllama(
-            model=os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
-            base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
-            temperature=0.1,
-        )
+        return _make_ollama_llm()
 
     # ── Gemini with automatic fallback across model versions ──────────
     from langchain_google_genai import ChatGoogleGenerativeAI
@@ -59,7 +74,7 @@ def get_llm():
     if fallback_str:
         models = [m.strip() for m in fallback_str.split(",") if m.strip()]
     else:
-        primary = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        primary = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
         models = [primary] + [m for m in _GEMINI_FALLBACK_DEFAULTS if m != primary]
 
     last_error = None
@@ -76,9 +91,25 @@ def get_llm():
             print(f"  [LLM] Model {model_name} failed ({type(e).__name__}), trying next...")
             continue
 
-    # If all fallbacks failed, return the primary model anyway and let the
-    # caller handle the error with full context
-    print(f"  [LLM] WARNING: All Gemini models failed. Using {models[0]} (may error).")
+    # ── All Gemini models failed — try Ollama auto-failover ──────────
+    if _is_ollama_available():
+        print(f"  [LLM] WARNING: All Gemini models failed. Ollama detected locally — auto-switching!")
+        try:
+            ollama_llm = _make_ollama_llm()
+            # Smoke-test the Ollama model too
+            from langchain_core.messages import HumanMessage as _HM
+            ollama_llm.invoke([_HM(content="Say OK")])
+            print(f"  [LLM] ✓ Ollama failover successful!")
+            return ollama_llm
+        except Exception as oe:
+            print(f"  [LLM] Ollama failover also failed ({type(oe).__name__}: {oe})")
+    else:
+        print(f"  [LLM] WARNING: All Gemini models failed and Ollama is not running.")
+        print(f"  [LLM]   → To enable local fallback: install Ollama and run 'ollama pull llama3.1:8b'")
+
+    # Last resort: return the primary model anyway and let the caller
+    # handle the error with full context (rule-based fallbacks)
+    print(f"  [LLM] WARNING: Using {models[0]} (may error — rule-based fallbacks will activate).")
     return ChatGoogleGenerativeAI(model=models[0], temperature=0.1)
 
 
