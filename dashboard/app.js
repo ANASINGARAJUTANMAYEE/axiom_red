@@ -10,6 +10,33 @@ let ws              = null;
 let feedCount       = 0;
 let state           = null;
 
+// ── Theme-aware canvas helpers (light/dark support) ───────────────────
+let _radarScores = null, _graphChains = null, _graphFindings = null;
+function cssVar(name, fb){
+  try { const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v || fb; }
+  catch(e){ return fb; }
+}
+function hexA(hex, a){                 // "#rgb"/"#rrggbb" → rgba() with alpha
+  try{
+    let h = (hex||"").trim().replace("#","");
+    if(h.length === 3) h = h.split("").map(c => c + c).join("");
+    const n = parseInt(h, 16); if(isNaN(n)) return hex;
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+  }catch(e){ return hex; }
+}
+// Re-draw canvases when the theme flips (called by the toggle in index.html)
+window.axiomRedraw = function(){
+  try{
+    if(_radarScores) renderRadarChart(_radarScores);
+    if(_graphChains) renderAttackGraph(_graphChains, _graphFindings || []);
+  }catch(e){}
+};
+// Update a button's text label without destroying its inline SVG icon
+function setStartLabel(t){
+  const b = document.querySelector("#btn-start .btn-label") || document.getElementById("btn-start");
+  if(b) b.textContent = t;
+}
+
 // ── 🔊 Voice Narration ──────────────────────────────────────────────
 let voiceEnabled = false;
 let speechQueue = [];
@@ -17,8 +44,7 @@ let speechQueue = [];
 function toggleVoice() {
   voiceEnabled = !voiceEnabled;
   const btn = document.getElementById("btn-voice");
-  btn.textContent = voiceEnabled ? "🔊 Voice" : "🔇 Voice";
-  btn.classList.toggle("voice-active", voiceEnabled);
+  btn.classList.toggle("voice-active", voiceEnabled);   // state shown by colour; icon preserved
   if (!voiceEnabled && window.speechSynthesis) {
     speechSynthesis.cancel();
   }
@@ -66,7 +92,7 @@ async function startScan() {
   if (!target) return alert("Please enter a target URL.");
 
   document.getElementById("btn-start").disabled = true;
-  document.getElementById("btn-start").textContent = "Launching…";
+  setStartLabel("Launching…");
   document.getElementById("btn-stop").style.display = "inline-flex";
   document.getElementById("live-feed").innerHTML = "";
   feedCount = 0;
@@ -86,7 +112,7 @@ async function startScan() {
     connectWS(currentSession);
   } catch (e) {
     document.getElementById("btn-start").disabled = false;
-    document.getElementById("btn-start").textContent = "▶ Launch AXIOM RED";
+    setStartLabel("Launch AXIOM RED");
     document.getElementById("btn-stop").style.display = "none";
     setStatus("idle", "Ready");
 
@@ -118,12 +144,12 @@ function stopScan() {
   setStatus("idle", "Stopped");
   document.getElementById("btn-stop").style.display = "none";
   document.getElementById("btn-start").disabled = false;
-  document.getElementById("btn-start").textContent = "▶ Launch AXIOM RED";
+  setStartLabel("Launch AXIOM RED");
 }
 
 // ── WebSocket ─────────────────────────────────────────────────────────
 function connectWS(sessionId) {
-  const wsUrl = `ws://localhost:8000/ws/${sessionId}`;
+  const wsUrl = `${API_BASE.replace(/^http/, "ws")}/ws/${sessionId}`;  // derives ws(s):// from API_BASE
   ws = new WebSocket(wsUrl);
 
   ws.onmessage = (evt) => {
@@ -189,7 +215,7 @@ function renderState(s) {
 
 // ── Phase steps ───────────────────────────────────────────────────────
 function updatePhases(phaseComplete, currentPhase) {
-  const phases = ["RECON","ANALYSE","PLAN","TEST","VALIDATE","REPORT"];
+  const phases = ["RECON","ANALYSE","PLAN","TEST","REFLECT","VALIDATE","EVIDENCE","REPORT"];
   phases.forEach(p => {
     const el = document.getElementById(`phase-${p}`);
     if (!el) return;
@@ -329,8 +355,16 @@ function toggleFinding(i) {
 function renderRadarChart(scores) {
   const canvas = document.getElementById("radar-canvas");
   if (!canvas) return;
+  _radarScores = scores;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = 300, cssH = 300;
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.width  = cssW + "px";
+  canvas.style.height = cssH + "px";
   const ctx = canvas.getContext("2d");
-  const W = canvas.width, H = canvas.height;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = cssW, H = cssH;
   const cx = W / 2, cy = H / 2;
   const R = Math.min(cx, cy) - 40;
 
@@ -352,7 +386,7 @@ function renderRadarChart(scores) {
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
     ctx.closePath();
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.strokeStyle = cssVar('--line', 'rgba(140,150,170,.25)');
     ctx.lineWidth = 1;
     ctx.stroke();
   }
@@ -366,11 +400,11 @@ function renderRadarChart(scores) {
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.lineTo(cx + R * Math.cos(angle), cy + R * Math.sin(angle));
-    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.strokeStyle = cssVar('--line-soft', 'rgba(140,150,170,.22)');
     ctx.stroke();
 
-    ctx.fillStyle = "#8892a4";
-    ctx.font = "10px Inter, sans-serif";
+    ctx.fillStyle = cssVar('--muted', '#8892a4');
+    ctx.font = "10px 'Space Grotesk', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(label, lx, ly);
@@ -389,11 +423,11 @@ function renderRadarChart(scores) {
     ctx.closePath();
 
     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-    grad.addColorStop(0, "rgba(224, 16, 48, 0.4)");
-    grad.addColorStop(1, "rgba(255, 45, 85, 0.15)");
+    grad.addColorStop(0, hexA(cssVar('--brand', '#e01030'), 0.40));
+    grad.addColorStop(1, hexA(cssVar('--brand-ink', '#ff2d55'), 0.14));
     ctx.fillStyle = grad;
     ctx.fill();
-    ctx.strokeStyle = "#e01030";
+    ctx.strokeStyle = cssVar('--brand', '#e01030');
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -405,9 +439,9 @@ function renderRadarChart(scores) {
       const y = cy + r * Math.sin(angle);
       ctx.beginPath();
       ctx.arc(x, y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = "#ff2d55";
+      ctx.fillStyle = cssVar('--brand-ink', '#ff2d55');
       ctx.fill();
-      ctx.strokeStyle = "#fff";
+      ctx.strokeStyle = cssVar('--panel', '#fff');
       ctx.lineWidth = 1.5;
       ctx.stroke();
     });
@@ -419,6 +453,7 @@ function renderAttackGraph(chains, findings) {
   const canvas = document.getElementById("attack-graph-canvas");
   const emptyEl = document.getElementById("graph-empty");
   if (!canvas) return;
+  _graphChains = chains; _graphFindings = findings;
 
   if (!chains || chains.length === 0) {
     if (emptyEl) emptyEl.style.display = "block";
@@ -426,10 +461,15 @@ function renderAttackGraph(chains, findings) {
   }
   if (emptyEl) emptyEl.style.display = "none";
 
-  canvas.width = canvas.parentElement.clientWidth || 900;
-  canvas.height = 480;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.parentElement.clientWidth || 900, cssH = 480;
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.width  = cssW + "px";
+  canvas.style.height = cssH + "px";
   const ctx = canvas.getContext("2d");
-  const W = canvas.width, H = canvas.height;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // crisp on HiDPI / projectors
+  const W = cssW, H = cssH;
   ctx.clearRect(0, 0, W, H);
 
   // Collect unique nodes
@@ -469,7 +509,7 @@ function renderAttackGraph(chains, findings) {
     ctx.beginPath();
     ctx.moveTo(sx, sy);
     ctx.lineTo(ex, ey);
-    ctx.strokeStyle = "rgba(224, 16, 48, 0.6)";
+    ctx.strokeStyle = hexA(cssVar('--brand', '#e01030'), 0.55);
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -481,13 +521,13 @@ function renderAttackGraph(chains, findings) {
     ctx.lineTo(ex - arrowSize * Math.cos(angle - 0.4), ey - arrowSize * Math.sin(angle - 0.4));
     ctx.lineTo(ex - arrowSize * Math.cos(angle + 0.4), ey - arrowSize * Math.sin(angle + 0.4));
     ctx.closePath();
-    ctx.fillStyle = "#e01030";
+    ctx.fillStyle = cssVar('--brand', '#e01030');
     ctx.fill();
 
     // Edge label
     const midX = (sx + ex) / 2, midY = (sy + ey) / 2;
-    ctx.fillStyle = "#7c839e";
-    ctx.font = "9px Inter, sans-serif";
+    ctx.fillStyle = cssVar('--muted', '#7c839e');
+    ctx.font = "9px 'Space Grotesk', sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(chain.label || "", midX, midY - 8);
   });
@@ -507,7 +547,7 @@ function renderAttackGraph(chains, findings) {
     // Circle
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, 22, 0, Math.PI * 2);
-    ctx.fillStyle = "#12151f";
+    ctx.fillStyle = cssVar('--panel', '#12151f');
     ctx.fill();
     ctx.strokeStyle = color;
     ctx.lineWidth = 2.5;
@@ -523,8 +563,8 @@ function renderAttackGraph(chains, findings) {
 
     // Label
     const shortName = name.length > 20 ? name.substring(0, 18) + "…" : name;
-    ctx.fillStyle = "#e8eaf2";
-    ctx.font = "11px Inter, sans-serif";
+    ctx.fillStyle = cssVar('--text', '#e8eaf2');
+    ctx.font = "11px 'Space Grotesk', sans-serif";
     ctx.fillText(shortName, pos.x, pos.y + 38);
   });
 }
@@ -626,7 +666,7 @@ function onDone(s) {
   setStatus("done", "Complete");
   document.getElementById("btn-stop").style.display = "none";
   document.getElementById("btn-start").disabled = false;
-  document.getElementById("btn-start").textContent = "▶ Launch AXIOM RED";
+  setStartLabel("Launch AXIOM RED");
 
   if (s.report_path) {
     const reportUrl = `${API_BASE}/api/report/${s.session_id}`;
@@ -694,7 +734,7 @@ function runDemoMode() {
     session_id: "demo-abc123",
     target: "http://localhost:5000",
     current_phase: "VALIDATE",
-    phase_complete: { RECON:true, ANALYSE:true, PLAN:true, TEST:true, VALIDATE:false, REPORT:false },
+    phase_complete: { RECON:true, ANALYSE:true, PLAN:true, TEST:true, REFLECT:false, VALIDATE:false, EVIDENCE:false, REPORT:false },
     open_ports: [
       { port:5000, service:"HTTP-Flask", state:"open" },
       { port:6379, service:"Redis", state:"open" },
@@ -829,12 +869,12 @@ function runDemoMode() {
       renderState(demoState);
       setStatus("done", "Demo Complete");
       document.getElementById("btn-start").disabled = false;
-      document.getElementById("btn-start").textContent = "▶ Launch AXIOM RED";
+      setStartLabel("Launch AXIOM RED");
       document.getElementById("btn-stop").style.display = "none";
       return;
     }
     demoState.current_phase = demoState.activity_log[i].phase;
-    const phases = ["RECON","ANALYSE","PLAN","TEST","VALIDATE","REPORT"];
+    const phases = ["RECON","ANALYSE","PLAN","TEST","REFLECT","VALIDATE","EVIDENCE","REPORT"];
     const idx = phases.indexOf(demoState.current_phase);
     phases.slice(0, idx).forEach(p => { demoState.phase_complete[p] = true; });
 
@@ -844,7 +884,7 @@ function runDemoMode() {
   }
 
   document.getElementById("btn-start").disabled = true;
-  document.getElementById("btn-start").textContent = "Running Demo…";
+  setStartLabel("Running Demo…");
   document.getElementById("btn-stop").style.display = "inline-flex";
   document.getElementById("live-feed").innerHTML = "";
   feedCount = 0;
@@ -885,7 +925,9 @@ function toggleTerminalView() {
   terminalOpen = !terminalOpen;
   overlay.style.display = terminalOpen ? "flex" : "none";
   const btn = document.getElementById("btn-terminal");
-  btn.textContent = terminalOpen ? "\u274c Close Terminal" : "\ud83c\udf19 Terminal";
+  btn.innerHTML = terminalOpen
+    ? '<svg class="ico"><use href="#i-terminal"/></svg> Close Terminal'
+    : '<svg class="ico"><use href="#i-terminal"/></svg> Terminal';
   btn.classList.toggle("terminal-active", terminalOpen);
 
   if (terminalOpen) {

@@ -46,3 +46,9 @@ logs/
 
 # ── Node (if any) ─────────────────────────────────────────────────────
 node_modules/
+
+# ── Backup / temp artifacts ───────────────────────────────────────────
+dashboard_old_backup/
+frontend.zip
+frontend_new/
+reports/*.json
