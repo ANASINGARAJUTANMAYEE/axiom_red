@@ -20,11 +20,27 @@ from agent.reporting.report_gen import generate_report
 
 
 # ── LLM Setup ────────────────────────────────────────────────────────────────
+_GEMINI_FALLBACK_DEFAULTS = [
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+]
+
+
 def get_llm():
+    """
+    Return an LLM instance. For Gemini, tries multiple model versions in
+    order (GEMINI_FALLBACK_MODELS env var) so the agent survives model
+    outages, quota limits, or version deprecations automatically.
+    """
     provider = os.getenv("LLM_PROVIDER", "gemini").lower()
+
     if provider == "openai":
         from langchain_openai import ChatOpenAI
         return ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-4o"), temperature=0.1)
+
     if provider == "ollama":
         try:
             from langchain_ollama import ChatOllama
@@ -35,8 +51,36 @@ def get_llm():
             base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
             temperature=0.1,
         )
+
+    # ── Gemini with automatic fallback across model versions ──────────
     from langchain_google_genai import ChatGoogleGenerativeAI
-    return ChatGoogleGenerativeAI(model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"), temperature=0.1)
+
+    fallback_str = os.getenv("GEMINI_FALLBACK_MODELS", "")
+    if fallback_str:
+        models = [m.strip() for m in fallback_str.split(",") if m.strip()]
+    else:
+        primary = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        models = [primary] + [m for m in _GEMINI_FALLBACK_DEFAULTS if m != primary]
+
+    last_error = None
+    for model_name in models:
+        try:
+            llm = ChatGoogleGenerativeAI(model=model_name, temperature=0.1)
+            # Quick smoke-test: send a tiny prompt to verify the model responds
+            from langchain_core.messages import HumanMessage as _HM
+            llm.invoke([_HM(content="Say OK")])
+            print(f"  [LLM] Using Gemini model: {model_name}")
+            return llm
+        except Exception as e:
+            last_error = e
+            print(f"  [LLM] Model {model_name} failed ({type(e).__name__}), trying next...")
+            continue
+
+    # If all fallbacks failed, return the primary model anyway and let the
+    # caller handle the error with full context
+    print(f"  [LLM] WARNING: All Gemini models failed. Using {models[0]} (may error).")
+    return ChatGoogleGenerativeAI(model=models[0], temperature=0.1)
+
 
 
 SYSTEM_PROMPT = """You are AXIOM RED, an elite AI red team operator. 

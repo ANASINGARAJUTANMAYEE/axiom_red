@@ -240,7 +240,7 @@ RESULT: ✗ TAMPERED — first broken record at seq 26.
 | Layer | Technology | Why we chose it |
 |-------|-----------|----------------|
 | **Agent Engine** | 🦜 LangGraph | Native state-machine with conditional edges — the only clean way to build a looping reflect-replan agent (a plain chain can't loop). |
-| **Reasoning** | Gemini / GPT-4o / Ollama | Multi-provider; Ollama local fallback means the demo survives a dead API key and keeps target data on-prem. |
+| **Reasoning** | Gemini 2.5 / GPT-4o / Ollama | Multi-provider with **automatic model fallback** (gemini-2.5-flash → 2.5-pro → 2.0-flash → 1.5-flash → 1.5-pro); Ollama local fallback means the demo survives a dead API key and keeps target data on-prem. |
 | **Backend** | ⚡ FastAPI + WebSocket | Async, thread-safe live streaming of agent state to the dashboard — judges watch it think in real time. |
 | **Attack Tools** | 🐍 Python (httpx, PyJWT, redis-py) | Pure-Python, no external binaries — portable, auditable, reproducible in any sandbox. |
 | **Evidence** | 🔒 hashlib (SHA-256) | Zero-dependency, standards-based tamper-evidence — verifiable by anyone, anywhere. |
@@ -262,6 +262,8 @@ RESULT: ✗ TAMPERED — first broken record at seq 26.
 | 6 | 🛡️ **Fail-Closed Scope Guard** | Refuses any host outside authorised scope | Enforces the rules of engagement in code, not docs |
 | 7 | 📡 **Live Reasoning Dashboard** | Streams Thought → Action → Result in real time | Judges see the AI *decide*, with voice + radar + graph |
 | 8 | 📊 **Benchmark Harness** | Scores coverage vs ground truth on Juice Shop/DVWA | A hard number, the way serious tools prove themselves |
+| 9 | 🚀 **One-Command Launcher** | `run_axiom_red.py` — project briefing, dep check, auto-install, launch, live logs, health monitor | Zero-friction demo: one command, everything runs |
+| 10 | 🔄 **Auto Model Fallback** | Tries 5 Gemini model versions automatically if primary is overloaded | Demo never fails due to API quota or model outage |
 
 <div align="center">
 
@@ -313,6 +315,24 @@ pie showData
 
 ## 🚀 Quick Start
 
+### ⚡ One-Command Launch (Recommended)
+
+```bash
+python run_axiom_red.py
+```
+
+That's it. The unified launcher will:
+1. Display a full project briefing (problem statement, features, architecture)
+2. Ask for your **Gemini API key** if not configured (saved to `.env` automatically)
+3. Check and **auto-install** all missing Python packages
+4. Launch the **backend** (`:8000`) + **vulnerable target** (`:5000`) simultaneously
+5. Stream **live tagged logs** (`[BACKEND]` / `[TARGET]`) in real time
+6. Monitor process health in the background
+
+Then open **http://localhost:8000** → enter `http://localhost:5000` → ▶ **Launch AXIOM RED**
+
+### 🔧 Manual Setup (Alternative)
+
 ```bash
 # 1. Setup
 cp .env.example .env              # add GOOGLE_API_KEY (or set LLM_PROVIDER=ollama for offline)
@@ -332,6 +352,16 @@ python run.py scan http://localhost:5000
 python verify.py reports/evidence_<session>.json
 ```
 
+### 🔑 LLM Model Fallback
+
+AXIOM RED automatically tries multiple Gemini models if the primary is overloaded:
+
+```
+gemini-2.5-flash → gemini-2.5-pro → gemini-2.0-flash → gemini-1.5-flash → gemini-1.5-pro
+```
+
+Configure in `.env` via `GEMINI_FALLBACK_MODELS` or set `LLM_PROVIDER=ollama` for fully offline operation.
+
 > 💡 **Demo mode:** click **▷ Run Demo** on the dashboard for a full simulated engagement — no backend or API key required.
 
 ---
@@ -349,7 +379,7 @@ python verify.py reports/evidence_<session>.json
 
 | Direction | Vision |
 |-----------|--------|
-| 🧩 **MCP Tool Server** | Expose AXIOM RED's tools over the Model Context Protocol so any agent (Claude, Cursor) can orchestrate it — the 2026 integration standard. |
+| 🧩 **MCP Tool Server** | ✅ **Implemented** — `mcp_server.py` exposes recon + attack tools over the Model Context Protocol so any agent (Claude, Cursor, etc.) can orchestrate AXIOM RED. |
 | 🌐 **Breadth of targets** | Extend beyond web/API into Active Directory, Kubernetes, and cloud misconfigurations. |
 | 🧠 **Attack-path search** | Monte-Carlo / beam search over the knowledge graph to find the optimal exploit chain, not just the first. |
 | ✍️ **Digitally-signed evidence** | Sign the root hash with a private key so reports are court-admissible chain-of-custody artifacts. |
