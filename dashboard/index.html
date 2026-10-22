@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AXIOM RED — Console</title>
+  <title>AXIOM RED — AI Red Team Console</title>
+  <meta name="description" content="AXIOM RED: AI-powered autonomous red-team agent with live reasoning dashboard" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <script>
     /* Apply saved/system theme BEFORE first paint (no flash of wrong theme) */
@@ -22,65 +23,72 @@
       var next = cur === "light" ? "dark" : "light";
       document.documentElement.setAttribute("data-theme", next);
       try{ localStorage.setItem("axiom-theme", next); }catch(e){}
-      var use = document.querySelector("#btn-theme .ico use");
-      if(use) use.setAttribute("href", next === "light" ? "#i-moon" : "#i-sun");
-      if(window.axiomRedraw) window.axiomRedraw();   // recolour canvases for the new theme
+      var icon = document.getElementById("theme-icon");
+      if(icon) icon.textContent = next === "light" ? "🌙" : "☀️";
+      if(window.axiomRedraw) window.axiomRedraw();
     }
     document.addEventListener("DOMContentLoaded", function(){
       var cur = document.documentElement.getAttribute("data-theme");
-      var use = document.querySelector("#btn-theme .ico use");
-      if(use) use.setAttribute("href", cur === "light" ? "#i-moon" : "#i-sun");
+      var icon = document.getElementById("theme-icon");
+      if(icon) icon.textContent = cur === "light" ? "🌙" : "☀️";
     });
   </script>
 </head>
 <body>
 
-<!-- ── ICON SPRITE (inline, offline) ───────────────────────────────── -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-hex" viewBox="0 0 24 24"><path d="M12 2l8.66 5v10L12 22l-8.66-5V7z"/></symbol>
-  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
-  <symbol id="i-radar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></symbol>
-  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.8 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
-  <symbol id="i-graph" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.3 10.8 15.7 7.2"/><path d="M8.3 13.2 15.7 16.8"/></symbol>
-  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.4 3 7.4 7 9 4-1.6 7-4.6 7-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
-  <symbol id="i-code" viewBox="0 0 24 24"><path d="m16 18 5-6-5-6"/><path d="m8 6-5 6 5 6"/></symbol>
-  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3.5 6h.01"/><path d="M3.5 12h.01"/><path d="M3.5 18h.01"/></symbol>
-  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></symbol>
-  <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></symbol>
-  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></symbol>
-  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
-  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z" fill="currentColor" stroke="none"/></symbol>
-  <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"/></symbol>
-  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
-  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 3v2M15 3v2M9 19v2M15 19v2M3 9h2M3 15h2M19 9h2M19 15h2"/></symbol>
-  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></symbol>
-  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></symbol>
-</svg>
+<!-- ── AMBIENT BACKGROUND ─────────────────────────────────────────── -->
+<div class="ambient-bg">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
 
 <!-- ── SIDEBAR ─────────────────────────────────────────────────────── -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
-    <div class="logo-icon"><svg class="ico"><use href="#i-hex"/></svg></div>
+    <div class="logo-hex">
+      <span class="logo-glyph">⬡</span>
+    </div>
     <div>
-      <div class="logo-name">AXIOM RED</div>
+      <div class="logo-name">AXIOM <span class="logo-accent">RED</span></div>
       <div class="logo-sub">AI Red Team Console</div>
     </div>
   </div>
 
   <nav class="sidebar-nav">
-    <a class="nav-item active" data-panel="dashboard" onclick="showPanel('dashboard',this)"><svg class="ico"><use href="#i-grid"/></svg> Dashboard</a>
-    <a class="nav-item" data-panel="recon" onclick="showPanel('recon',this)"><svg class="ico"><use href="#i-radar"/></svg> Recon</a>
-    <a class="nav-item" data-panel="findings" onclick="showPanel('findings',this)"><svg class="ico"><use href="#i-alert"/></svg> Findings</a>
-    <a class="nav-item" data-panel="attackgraph" onclick="showPanel('attackgraph',this)"><svg class="ico"><use href="#i-graph"/></svg> Attack Graph</a>
-    <a class="nav-item" data-panel="compliance" onclick="showPanel('compliance',this)"><svg class="ico"><use href="#i-shield"/></svg> Compliance</a>
-    <a class="nav-item" data-panel="xss" onclick="showPanel('xss',this)"><svg class="ico"><use href="#i-code"/></svg> XSS Attacks</a>
-    <a class="nav-item" data-panel="logs" onclick="showPanel('logs',this)"><svg class="ico"><use href="#i-list"/></svg> Activity Log</a>
-    <a class="nav-item" data-panel="report" onclick="showPanel('report',this)"><svg class="ico"><use href="#i-file"/></svg> Report</a>
+    <a class="nav-item active" data-panel="dashboard" onclick="showPanel('dashboard',this)">
+      <span class="nav-icon">◉</span> Dashboard
+    </a>
+    <a class="nav-item" data-panel="recon" onclick="showPanel('recon',this)">
+      <span class="nav-icon">◎</span> Recon
+    </a>
+    <a class="nav-item" data-panel="findings" onclick="showPanel('findings',this)">
+      <span class="nav-icon">⚠</span> Findings
+      <span class="nav-badge" id="nav-findings-count" style="display:none">0</span>
+    </a>
+    <a class="nav-item" data-panel="attackgraph" onclick="showPanel('attackgraph',this)">
+      <span class="nav-icon">⛓</span> Attack Graph
+    </a>
+    <a class="nav-item" data-panel="compliance" onclick="showPanel('compliance',this)">
+      <span class="nav-icon">🛡</span> Compliance
+    </a>
+    <a class="nav-item" data-panel="xss" onclick="showPanel('xss',this)">
+      <span class="nav-icon">❮❯</span> XSS Attacks
+    </a>
+    <a class="nav-item" data-panel="logs" onclick="showPanel('logs',this)">
+      <span class="nav-icon">☰</span> Activity Log
+    </a>
+    <a class="nav-item" data-panel="report" onclick="showPanel('report',this)">
+      <span class="nav-icon">📄</span> Report
+    </a>
   </nav>
 
-  <div class="sidebar-status" id="sidebar-status">
-    <div class="status-dot idle" id="status-dot"></div>
-    <span id="status-text">Ready</span>
+  <div class="sidebar-footer">
+    <div class="sidebar-status" id="sidebar-status">
+      <div class="status-dot idle" id="status-dot"></div>
+      <span id="status-text">Ready</span>
+    </div>
+    <div class="sidebar-version">v2.0 • LangGraph Engine</div>
   </div>
 </aside>
 
@@ -90,15 +98,25 @@
   <!-- TOP BAR -->
   <header class="topbar">
     <div class="topbar-left">
-      <span class="topbar-title" id="topbar-title">New Engagement</span>
+      <h1 class="topbar-title" id="topbar-title">New Engagement</h1>
       <span class="topbar-badge" id="topbar-phase">IDLE</span>
     </div>
-    <div class="topbar-right">
-      <button class="btn btn-ghost btn-icon" id="btn-theme" onclick="toggleTheme()" title="Toggle light / dark theme" aria-label="Toggle light or dark theme"><svg class="ico"><use href="#i-sun"/></svg></button>
-      <button class="btn btn-ghost" id="btn-terminal" onclick="toggleTerminalView()" title="Terminal view"><svg class="ico"><use href="#i-terminal"/></svg> Terminal</button>
-      <button class="btn btn-ghost" id="btn-voice" onclick="toggleVoice()" title="Toggle voice narration"><svg class="ico"><use href="#i-volume"/></svg> Voice</button>
-      <button class="btn btn-ghost" id="btn-stop" onclick="stopScan()" style="display:none"><svg class="ico"><use href="#i-stop"/></svg> Stop</button>
-      <a class="btn btn-outline" id="btn-report" href="#" target="_blank" style="display:none"><svg class="ico"><use href="#i-external"/></svg> View Report</a>
+    <div class="topbar-actions">
+      <button class="action-btn" id="btn-theme" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
+        <span id="theme-icon">☀️</span>
+      </button>
+      <button class="action-btn" id="btn-terminal" onclick="toggleTerminalView()" title="Terminal view (F2)">
+        <span>⌨</span> Terminal
+      </button>
+      <button class="action-btn" id="btn-voice" onclick="toggleVoice()" title="Toggle voice narration">
+        <span>🔊</span> Voice
+      </button>
+      <button class="action-btn danger" id="btn-stop" onclick="stopScan()" style="display:none">
+        <span>⏹</span> Stop
+      </button>
+      <a class="action-btn accent" id="btn-report" href="#" target="_blank" style="display:none">
+        <span>↗</span> View Report
+      </a>
     </div>
   </header>
 
@@ -106,70 +124,81 @@
   <div class="panel active" id="panel-dashboard">
 
     <!-- SCAN INITIATION -->
-    <div class="scan-card" id="scan-card">
+    <div class="scan-card glass-card" id="scan-card">
       <div class="scan-header">
-        <div class="scan-title">Launch engagement</div>
-        <div class="scan-sub">Enter a target inside the authorised Docker sandbox.</div>
+        <div class="scan-icon">🎯</div>
+        <div>
+          <div class="scan-title">Launch Engagement</div>
+          <div class="scan-sub">Enter a target inside the authorised Docker sandbox.</div>
+        </div>
       </div>
       <div class="scan-form">
-        <div class="form-group">
-          <label>Target URL</label>
-          <input type="text" id="target-input" value="http://localhost:5000" placeholder="http://172.20.0.30:5000" />
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label>Target URL</label>
+            <input type="text" id="target-input" value="http://localhost:5000" placeholder="http://172.20.0.30:5000" />
+          </div>
+          <div class="form-group flex-1">
+            <label>AI Model</label>
+            <select id="llm-select">
+              <option value="gemini">Gemini 3.8 Flash</option>
+              <option value="openai">OpenAI GPT-4o</option>
+              <option value="ollama">Local (Ollama)</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Reasoning model</label>
-          <select id="llm-select">
-            <option value="gemini">Google Gemini (Flash)</option>
-            <option value="openai">OpenAI GPT-4o</option>
-            <option value="ollama">Local (Ollama)</option>
-          </select>
-        </div>
-        <button class="btn btn-primary" id="btn-start" onclick="startScan()"><svg class="ico"><use href="#i-play"/></svg> <span class="btn-label">Launch AXIOM RED</span></button>
+        <button class="btn-launch" id="btn-start" onclick="startScan()">
+          <span class="btn-glow"></span>
+          <span class="btn-label">▶ Launch AXIOM RED</span>
+        </button>
       </div>
     </div>
 
     <!-- PHASE PROGRESS -->
     <div class="phases-row" id="phases-row">
-      <div class="phase-step" id="phase-RECON"><div class="phase-icon"></div><div class="phase-label">Recon</div><div class="phase-status">pending</div></div>
-      <div class="phase-arrow">→</div>
-      <div class="phase-step" id="phase-ANALYSE"><div class="phase-icon"></div><div class="phase-label">Analyse</div><div class="phase-status">pending</div></div>
-      <div class="phase-arrow">→</div>
-      <div class="phase-step" id="phase-PLAN"><div class="phase-icon"></div><div class="phase-label">Plan</div><div class="phase-status">pending</div></div>
-      <div class="phase-arrow">→</div>
-      <div class="phase-step" id="phase-TEST"><div class="phase-icon"></div><div class="phase-label">Test</div><div class="phase-status">pending</div></div>
-      <div class="phase-arrow">→</div>
-      <div class="phase-step" id="phase-REFLECT"><div class="phase-icon"></div><div class="phase-label">Reflect</div><div class="phase-status">pending</div></div>
-      <div class="phase-arrow">→</div>
-      <div class="phase-step" id="phase-VALIDATE"><div class="phase-icon"></div><div class="phase-label">Validate</div><div class="phase-status">pending</div></div>
-      <div class="phase-arrow">→</div>
-      <div class="phase-step" id="phase-EVIDENCE"><div class="phase-icon"></div><div class="phase-label">Evidence</div><div class="phase-status">pending</div></div>
-      <div class="phase-arrow">→</div>
-      <div class="phase-step" id="phase-REPORT"><div class="phase-icon"></div><div class="phase-label">Report</div><div class="phase-status">pending</div></div>
+      <div class="phase-step" id="phase-RECON"><div class="phase-dot"></div><div class="phase-label">Recon</div><div class="phase-status">pending</div></div>
+      <div class="phase-connector"></div>
+      <div class="phase-step" id="phase-ANALYSE"><div class="phase-dot"></div><div class="phase-label">Analyse</div><div class="phase-status">pending</div></div>
+      <div class="phase-connector"></div>
+      <div class="phase-step" id="phase-PLAN"><div class="phase-dot"></div><div class="phase-label">Plan</div><div class="phase-status">pending</div></div>
+      <div class="phase-connector"></div>
+      <div class="phase-step" id="phase-TEST"><div class="phase-dot"></div><div class="phase-label">Test</div><div class="phase-status">pending</div></div>
+      <div class="phase-connector"></div>
+      <div class="phase-step" id="phase-REFLECT"><div class="phase-dot"></div><div class="phase-label">Reflect</div><div class="phase-status">pending</div></div>
+      <div class="phase-connector"></div>
+      <div class="phase-step" id="phase-VALIDATE"><div class="phase-dot"></div><div class="phase-label">Validate</div><div class="phase-status">pending</div></div>
+      <div class="phase-connector"></div>
+      <div class="phase-step" id="phase-EVIDENCE"><div class="phase-dot"></div><div class="phase-label">Evidence</div><div class="phase-status">pending</div></div>
+      <div class="phase-connector"></div>
+      <div class="phase-step" id="phase-REPORT"><div class="phase-dot"></div><div class="phase-label">Report</div><div class="phase-status">pending</div></div>
     </div>
 
     <!-- STATS STRIP -->
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-value critical" id="stat-critical">0</div><div class="stat-label">Critical</div></div>
-      <div class="stat-card"><div class="stat-value high" id="stat-high">0</div><div class="stat-label">High</div></div>
-      <div class="stat-card"><div class="stat-value medium" id="stat-medium">0</div><div class="stat-label">Medium</div></div>
-      <div class="stat-card"><div class="stat-value low" id="stat-low">0</div><div class="stat-label">Low</div></div>
-      <div class="stat-card"><div class="stat-value info" id="stat-ports">0</div><div class="stat-label">Ports found</div></div>
-      <div class="stat-card"><div class="stat-value info" id="stat-endpoints">0</div><div class="stat-label">Endpoints</div></div>
+      <div class="stat-card glass-card crit"><div class="stat-value" id="stat-critical">0</div><div class="stat-label">Critical</div></div>
+      <div class="stat-card glass-card high"><div class="stat-value" id="stat-high">0</div><div class="stat-label">High</div></div>
+      <div class="stat-card glass-card med"><div class="stat-value" id="stat-medium">0</div><div class="stat-label">Medium</div></div>
+      <div class="stat-card glass-card low"><div class="stat-value" id="stat-low">0</div><div class="stat-label">Low</div></div>
+      <div class="stat-card glass-card info"><div class="stat-value" id="stat-ports">0</div><div class="stat-label">Ports</div></div>
+      <div class="stat-card glass-card info"><div class="stat-value" id="stat-endpoints">0</div><div class="stat-label">Endpoints</div></div>
     </div>
 
-    <!-- RADAR + LIVE FEED (feed is the hero) -->
+    <!-- RADAR + LIVE FEED -->
     <div class="two-col">
-      <div class="card radar-card">
-        <div class="card-title"><svg class="ico"><use href="#i-radar"/></svg> Security posture</div>
+      <div class="glass-card radar-card">
+        <div class="card-title"><span class="card-icon">◎</span> Security Posture</div>
         <canvas id="radar-canvas" width="300" height="300"></canvas>
       </div>
-      <div class="live-feed-card">
+      <div class="glass-card live-feed-card">
         <div class="feed-header">
-          <span><svg class="ico"><use href="#i-bolt"/></svg> Live agent feed</span>
+          <span><span class="pulse-dot"></span> Live Agent Feed</span>
           <span class="feed-badge" id="feed-badge">0 events</span>
         </div>
         <div class="feed-body" id="live-feed">
-          <div class="feed-empty">Waiting for an engagement to start.</div>
+          <div class="feed-empty">
+            <div class="feed-empty-icon">⚡</div>
+            Waiting for an engagement to start.
+          </div>
         </div>
       </div>
     </div>
@@ -179,20 +208,20 @@
   <!-- ── PANEL: RECON ─────────────────────────────────────────────── -->
   <div class="panel" id="panel-recon">
     <div class="panel-head">
-      <div class="panel-title"><svg class="ico"><use href="#i-radar"/></svg> Recon results</div>
+      <div class="panel-title"><span class="panel-icon">◎</span> Recon Results</div>
       <div class="panel-sub">Discovered ports, endpoints and technologies.</div>
     </div>
     <div class="two-col">
-      <div class="card"><div class="card-title">Open ports</div><div id="ports-list" class="mono-list">No data yet.</div></div>
-      <div class="card"><div class="card-title">Technologies</div><div id="tech-list" class="mono-list">No data yet.</div></div>
+      <div class="glass-card"><div class="card-title">Open Ports</div><div id="ports-list" class="mono-list">No data yet.</div></div>
+      <div class="glass-card"><div class="card-title">Technologies</div><div id="tech-list" class="mono-list">No data yet.</div></div>
     </div>
-    <div class="card" style="margin-top:18px"><div class="card-title">Web endpoints</div><div id="endpoints-list" class="mono-list">No data yet.</div></div>
+    <div class="glass-card" style="margin-top:16px"><div class="card-title">Web Endpoints</div><div id="endpoints-list" class="mono-list">No data yet.</div></div>
   </div>
 
   <!-- ── PANEL: FINDINGS ──────────────────────────────────────────── -->
   <div class="panel" id="panel-findings">
     <div class="panel-head">
-      <div class="panel-title"><svg class="ico"><use href="#i-alert"/></svg> Findings</div>
+      <div class="panel-title"><span class="panel-icon">⚠</span> Findings</div>
       <div class="panel-sub">Confirmed vulnerabilities, each with evidence.</div>
     </div>
     <div id="findings-list"><div class="empty-state">No findings yet — run an engagement first.</div></div>
@@ -201,10 +230,10 @@
   <!-- ── PANEL: ATTACK GRAPH ──────────────────────────────────────── -->
   <div class="panel" id="panel-attackgraph">
     <div class="panel-head">
-      <div class="panel-title"><svg class="ico"><use href="#i-graph"/></svg> Attack chain graph</div>
+      <div class="panel-title"><span class="panel-icon">⛓</span> Attack Chain Graph</div>
       <div class="panel-sub">How the confirmed vulnerabilities chain together.</div>
     </div>
-    <div class="card">
+    <div class="glass-card">
       <canvas id="attack-graph-canvas"></canvas>
       <div id="graph-empty" class="empty-state">The attack chain appears after the validation phase.</div>
     </div>
@@ -213,17 +242,17 @@
   <!-- ── PANEL: COMPLIANCE ────────────────────────────────────────── -->
   <div class="panel" id="panel-compliance">
     <div class="panel-head">
-      <div class="panel-title"><svg class="ico"><use href="#i-shield"/></svg> OWASP Top 10 scorecard</div>
+      <div class="panel-title"><span class="panel-icon">🛡</span> OWASP Top 10 Scorecard</div>
       <div class="panel-sub">Findings mapped to OWASP Top 10 (2021).</div>
     </div>
-    <div class="card" id="owasp-scorecard">
+    <div class="glass-card" id="owasp-scorecard">
       <table class="owasp-table" id="owasp-table">
         <thead><tr><th>Category</th><th>Status</th><th>Findings</th><th>CVSS</th></tr></thead>
         <tbody id="owasp-tbody"></tbody>
       </table>
     </div>
-    <div class="card" style="margin-top:18px;" id="owasp-summary-card">
-      <div class="card-title">Compliance score</div>
+    <div class="glass-card" style="margin-top:16px;" id="owasp-summary-card">
+      <div class="card-title">Compliance Score</div>
       <div id="owasp-score-bar" class="owasp-score-bar"></div>
     </div>
   </div>
@@ -231,7 +260,7 @@
   <!-- ── PANEL: LOGS ──────────────────────────────────────────────── -->
   <div class="panel" id="panel-logs">
     <div class="panel-head">
-      <div class="panel-title"><svg class="ico"><use href="#i-list"/></svg> Agent activity log</div>
+      <div class="panel-title"><span class="panel-icon">☰</span> Agent Activity Log</div>
       <div class="panel-sub">The full reasoning chain — thought, action, result.</div>
     </div>
     <div id="log-list" class="log-container"><div class="empty-state">The activity log fills in during an engagement.</div></div>
@@ -240,11 +269,11 @@
   <!-- ── PANEL: REPORT ────────────────────────────────────────────── -->
   <div class="panel" id="panel-report">
     <div class="panel-head">
-      <div class="panel-title"><svg class="ico"><use href="#i-file"/></svg> Generated report</div>
+      <div class="panel-title"><span class="panel-icon">📄</span> Generated Report</div>
       <div class="panel-sub">The auto-generated pentest report.</div>
     </div>
-    <div class="card exec-summary-card" id="exec-summary-card" style="display:none;">
-      <div class="card-title"><svg class="ico"><use href="#i-cpu"/></svg> Executive summary</div>
+    <div class="glass-card exec-summary-card" id="exec-summary-card" style="display:none;">
+      <div class="card-title"><span class="card-icon">🧠</span> AI Executive Summary</div>
       <p id="exec-summary-text" class="exec-summary-text"></p>
     </div>
     <div id="report-frame-container" style="height: calc(100vh - 300px);">
@@ -252,40 +281,39 @@
     </div>
   </div>
 
-  <!-- ── XSS PANEL ───────────────────────────────────────────────────── -->
+  <!-- ── XSS PANEL ───────────────────────────────────────────────── -->
   <div class="panel" id="panel-xss" style="display:none;">
-
-  <div class="panel-head">
-    <div class="panel-title"><svg class="ico"><use href="#i-code"/></svg> XSS attack vectors</div>
-    <div class="panel-sub">Cross-site scripting — reflected and stored results.</div>
-  </div>
-  <div class="two-col" style="margin-bottom:18px;">
-    <div class="card">
-      <div class="card-title"><svg class="ico"><use href="#i-bolt"/></svg> Reflected XSS</div>
-      <p style="font-size:13px;color:var(--muted);line-height:1.7;">Payload injected via a URL parameter; runs immediately when a victim opens a crafted link. Target: <code>/api/v1/greet?name=&lt;payload&gt;</code></p>
-      <div id="xss-reflected-status" class="xss-status-box">Run a scan to test.</div>
+    <div class="panel-head">
+      <div class="panel-title"><span class="panel-icon">❮❯</span> XSS Attack Vectors</div>
+      <div class="panel-sub">Cross-site scripting — reflected and stored results.</div>
     </div>
-    <div class="card">
-      <div class="card-title"><svg class="ico"><use href="#i-alert"/></svg> Stored XSS</div>
-      <p style="font-size:13px;color:var(--muted);line-height:1.7;">Payload saved server-side; runs for <em>every</em> viewer with no interaction — more dangerous than reflected. Target: <code>POST /api/v1/comment</code></p>
-      <div id="xss-stored-status" class="xss-status-box">Run a scan to test.</div>
+    <div class="two-col" style="margin-bottom:16px;">
+      <div class="glass-card">
+        <div class="card-title"><span class="card-icon">⚡</span> Reflected XSS</div>
+        <p class="card-desc">Payload injected via URL parameter; runs immediately when a victim opens a crafted link. Target: <code>/api/v1/greet?name=&lt;payload&gt;</code></p>
+        <div id="xss-reflected-status" class="xss-status-box">Run a scan to test.</div>
+      </div>
+      <div class="glass-card">
+        <div class="card-title"><span class="card-icon">⚠</span> Stored XSS</div>
+        <p class="card-desc">Payload saved server-side; runs for <em>every</em> viewer — more dangerous than reflected. Target: <code>POST /api/v1/comment</code></p>
+        <div id="xss-stored-status" class="xss-status-box">Run a scan to test.</div>
+      </div>
     </div>
-  </div>
-  <div class="card">
-    <div class="card-title"><svg class="ico"><use href="#i-code"/></svg> Payload arsenal</div>
-    <div class="xss-payload-grid" id="xss-payload-grid">
-      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;script&gt;alert('XSS')&lt;/script&gt;">Script tag</div>
-      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;img src=x onerror=alert(1)&gt;">img onerror</div>
-      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;svg onload=alert(1)&gt;">SVG onload</div>
-      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="'&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;">Attr breakout</div>
-      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="javascript:alert(document.cookie)">JS URI</div>
-      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;body onload=alert(document.cookie)&gt;">Cookie theft</div>
-      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;iframe src=javascript:alert('XSS')&gt;&lt;/iframe&gt;">iFrame</div>
-      <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;input autofocus onfocus=alert(1)&gt;">Autofocus</div>
+    <div class="glass-card">
+      <div class="card-title"><span class="card-icon">❮❯</span> Payload Arsenal</div>
+      <div class="xss-payload-grid" id="xss-payload-grid">
+        <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;script&gt;alert('XSS')&lt;/script&gt;">Script tag</div>
+        <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;img src=x onerror=alert(1)&gt;">img onerror</div>
+        <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;svg onload=alert(1)&gt;">SVG onload</div>
+        <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="'&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;">Attr breakout</div>
+        <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="javascript:alert(document.cookie)">JS URI</div>
+        <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;body onload=alert(document.cookie)&gt;">Cookie theft</div>
+        <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;iframe src=javascript:alert('XSS')&gt;&lt;/iframe&gt;">iFrame</div>
+        <div class="payload-chip" onclick="navigator.clipboard.writeText(this.dataset.pay)" data-pay="&lt;input autofocus onfocus=alert(1)&gt;">Autofocus</div>
+      </div>
+      <div class="chip-hint">Click any chip to copy the payload.</div>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:12px;">Click any chip to copy the payload.</div>
-  </div>
-  <div id="xss-findings-list" style="margin-top:14px"></div>
+    <div id="xss-findings-list" style="margin-top:14px"></div>
   </div>
 
 </main>
@@ -303,11 +331,11 @@
     <div class="terminal-body" id="terminal-body">
       <div class="terminal-banner">
         <pre class="ascii-art">
-  ___  _  _____ ___  __  __   ____  _____ ____
- / _ \| |/ /_ _/ _ \|  \/  | |  _ \| ____|  _ \
-| |_| | ' / | | | | | |\/| | | |_) |  _| | | | |
-|  _  | . \ | | |_| | |  | | |  _ &lt;| |___| |_| |
-|_| |_|_|\_\___\___/|_|  |_| |_| \_\_____|____/
+   ___  _  _____ ___  __  __   ____  _____ ____
+  / _ \| |/ /_ _/ _ \|  \/  | |  _ \| ____|  _ \
+ | |_| | ' / | | | | | |\/| | | |_) |  _| | | | |
+ |  _  | . \ | | |_| | |  | | |  _ <| |___| |_| |
+ |_| |_|_|\_\___\___/|_|  |_| |_| \_\_____|____/
         </pre>
         <div class="terminal-tagline">AI-powered autonomous red-team agent // AXIOM RED</div>
       </div>
@@ -320,3 +348,5 @@
 <script src="app.js"></script>
 </body>
 </html>
+</CodeContent>
+<parameter name="Description">Complete redesign of the dashboard HTML with a premium glass-morphism design, ambient animated orbs, refined layout, better typography (Inter + JetBrains Mono), and a polished structure while keeping all element IDs and class names that app.js depends on.

@@ -16,6 +16,7 @@ function cssVar(name, fb){
   try { const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v || fb; }
   catch(e){ return fb; }
 }
+// Update theme icon when axiomRedraw is called (canvas recolour)
 function hexA(hex, a){                 // "#rgb"/"#rrggbb" → rgba() with alpha
   try{
     let h = (hex||"").trim().replace("#","");
@@ -926,8 +927,8 @@ function toggleTerminalView() {
   overlay.style.display = terminalOpen ? "flex" : "none";
   const btn = document.getElementById("btn-terminal");
   btn.innerHTML = terminalOpen
-    ? '<svg class="ico"><use href="#i-terminal"/></svg> Close Terminal'
-    : '<svg class="ico"><use href="#i-terminal"/></svg> Terminal';
+    ? '<span>⌨</span> Close Terminal'
+    : '<span>⌨</span> Terminal';
   btn.classList.toggle("terminal-active", terminalOpen);
 
   if (terminalOpen) {
